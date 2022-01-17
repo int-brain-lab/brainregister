@@ -1,0 +1,281 @@
+---
+#####################################
+### BRAINREGISTER PARAMETERS FILE ###
+#####################################
+
+
+# source- parameters define the source IMAGE SPACE
+#
+#   template-path: 
+#        Relative path to a VALID TEMPLATE IMAGE.
+#         The image defined at this path is used for optimising registration to 
+#         the target-template.
+#
+#   annotations-path (OPTIONAL):
+#       Relative path to ANNOTATION IMAGES
+#        An annotation image represents image regions with distinct pixel values.
+#        If the source data has any annotation images, can declare them under 
+#        this list for correct transformation to the target image space.
+#
+#   images: 
+#       Relative path from source-template-path of additional images to be 
+#        transformed during registration.
+#       NOTE: Any name can be used here in replacement of 'images'
+#        eg. source-img-path, etc.
+#
+#   template-resolution: 
+#       Source template image resolution in XYZ - used for matching image 
+#        resolutions during downsampling.
+#
+#   template-size: 
+#       Source template image size in XYZ - used for matching image 
+#        resolutions during downsampling.
+#
+#   structure: 
+#       What structure is in the source template?  These should be defined in 
+#        the TARGET PARAMETER FILE. Use to select subsets of (or 'mask) the 
+#        target template for registration.
+#       For BrainRegister Allen CCF: whole CNS split into 16 quadrants:
+#        4 coronal, 2 sagittal, 2 horizontal:
+#          CNS-<LT,RT>-<OLF,FB,MB,HB>-<UPPER,LOWER>
+#
+#   orientation:
+#       How is the source-template oriented?  These should be defined in the 
+#        TARGET PARAMETER FILE. Use to ensure registration proceeds with both
+#        source and target templates oriented in the same manner.
+#       For BrainRegister Allen CCF:  
+#        Specify which AXIS and its DIRECTION each image dimension is in order: 
+#          eg. XYZ -> LR:SI:PA
+#            mediolateral: <LR,RL> for left/right direction
+#            dorsoventral: <SI,IS> for superior/inferior direction
+#            anteroposterior: <AP,PA> for anterior/posterior direction
+#          See documentation: 
+#
+source-template-path: default/path.nrrd
+source-annotations-path:
+- annotation.nrrd
+source-structure-tree:
+- annotation1_tree.csv
+source-images-path:
+- img1.nrrd
+- img2.nrrd
+source-template-resolution:
+  x-um: 0.0
+  y-um: 0.0
+  z-um: 0.0
+source-template-size:
+  x: 0
+  y: 0
+  z: 0
+source-template-structure: CNS
+source-template-orientation: LR:SI:PA
+
+
+# target- parameters define the target IMAGE SPACE
+#
+#   template-path: 
+#       Relative path to a VALID TARGET PARAMETERS FILE
+#        The remaining params are collected from it.
+#        See ccf_parameters.yaml in the brainregister package for further details.
+#          See documentation: 
+#   template-output:
+#       Relative path to the output target parameters file.
+#        Following registration, the source image space can be used to register
+#         to a new source image space, and this target-template-output file
+#         contains the metadata necessary to perform this registration.
+#          See documentation:
+#
+target-template-path: brainregister:resource/allen-ccf/ccf_parameters.yaml
+target-template-output: target_parameters.yaml
+
+
+# downsampling- parameters define how to perform downsampling
+#   downsampling moves the higher resolution image between source and target into 
+#    the lower resolution image space.
+#   This improves registration by ensuring the higher resolution data is 
+#    appropriately filtered for optimal alignment during elastix registration.
+#
+#   filter:
+#       Specify an image filter to use on the higher resolution image when 
+#        downsampling. Set to 'false' to disable.
+#       THIS IS ALWAYS USED as downsampling is always performed unless source 
+#        and target template images are same size.
+#       The default performs a median filter of radius equal to the resolution 
+#        difference in each dimension, removing any noise from data below the 
+#        lower resolution, whilst preserving edges effectively.
+#
+#   prefix:
+#       This prefix is put on the front of each file name that is saved to disk.
+#
+#   save-image-type:
+#       Defines what image type any downsampled image saved to disk should be 
+#        saved as.
+#       Definition is based on image extension.  Default is "nrrd", which is 
+#        preferred as it adds data compression to storage.
+#       MUST be a VALID simpleITK image type : nrrd, tiff, mhd
+#        see https://simpleitk.readthedocs.io/en/master/IO.html
+#
+downsampling-filter: brainregister:downsampling-adaptive-filter
+downsampling-prefix: ds_
+downsampling-save-image-type: nrrd
+
+
+# downsampling output for each registration direction can be saved independently
+#  
+#   output:
+#       Relative path from this YAML file to directory where downsampled registration 
+#        & transforms will be stored.
+#       SET TO "false" if downsampling should not be stored or saved separately - it 
+#        will be stored along with other transforms in the appropriate output directory.
+#       The full directory tree is generated as needed.
+#
+#   transform-parameter-file:
+#       The name of the file to save the downsampling transform to.
+#
+#   save-template:
+#       Boolean to indicate whether the template image should be saved to disk after 
+#        downsampling.
+#
+#   save-annotations:
+#       Boolean to indicate whether any annotation images and any linked structure
+#        tree CSV files should be saved to disk after downsampling.
+#
+#   save-images:
+#       Boolean to indicate whether all other images should be saved to disk after 
+#        downsampling.
+#
+source-to-target-downsampling-output: downsampled_data
+source-to-target-downsampling-transform-parameter-file: sample-to-ccf_downsampling-transform.txt
+source-to-target-downsampling-save-template: true
+source-to-target-downsampling-save-annotations: true
+source-to-target-downsampling-save-images: true
+
+target-to-source-downsampling-output: downsampled_data
+target-to-source-downsampling-transform-parameter-file: ccf-to-sample_downsampling-transform.txt
+target-to-source-downsampling-save-template: true
+target-to-source-downsampling-save-annotations: true
+target-to-source-downsampling-save-images: true
+
+
+# source-to-target- 
+#   defines the registration and transform from source IMAGE SPACE to the target 
+#    IMAGE SPACE after downsampling.
+#
+#   output: 
+#       Relative path from this YAML file to directory where registration & transforms 
+#        will be stored.
+#       This full directory tree is generated as needed.
+#
+#   filter:
+#       Specify a filter to use on both source and target template images prior to 
+#        registration.
+#       The default performs a median filter of radius 4 in each dimension, which 
+#        is effective for registering auto-fluroescence data.
+#
+#   elastix-parameter-files:
+#       The names of the files that specify the elastix parameters for registering 
+#        source to target.
+#       The default registration optimises an Affine followed by a BSpline transform, 
+#        with parameters optimised for mouse  CNS autofluorescence data pre-filtered 
+#        with the autofl-filter.
+#
+#   transform-parameter-files:
+#       The names of the files to save the elastix transforms to.
+#
+#   save-template:
+#       Boolean to indicate whether the source template image should be saved to 
+#        disk after registration.
+#
+#   save-annotations:
+#       Boolean to indicate whether anysource  annotation images and any linked 
+#        structure tree CSV files should be saved to disk after downsampling.
+#
+#   save-images:
+#       Boolean to indicate whether all other source images should be saved to 
+#        disk after registration.
+#
+#   prefix:
+#       This prefix is put on the front of each file name that is saved to disk.
+#
+#   save-image-type:
+#       Defines what image type any downsampled image saved to disk should be saved 
+#        as. Definition is based on image extension.  Default is "nrrd", which is 
+#        preferred as it adds data compression to storage.
+#       MUST be a VALID simpleITK image type : nrrd, tiff, mhd 
+#        see https://simpleitk.readthedocs.io/en/master/IO.html
+#
+source-to-target-output: sample_to_ccf
+source-to-target-filter: brainregister:autofl-filter
+source-to-target-elastix-parameter-files:
+- brainregister:affine
+- brainregister:bspline
+source-to-target-transform-parameter-files:
+- brainregister-affine_to-target.txt
+- brainregister-bspline_to-target.txt
+source-to-target-save-template: true
+source-to-target-save-annotations: true
+source-to-target-save-images: true
+source-to-target-prefix: CCF_
+source-to-target-save-image-type: nrrd
+
+
+# target-to-source- 
+#   defines the registration and transform from target IMAGE SPACE to the source 
+#    IMAGE SPACE after downsampling.
+#
+#   output: 
+#       Relative path from this YAML file to directory where registration & transforms 
+#        will be stored.
+#       This full directory tree is generated as needed.
+#
+#   filter:
+#       Specify a filter to use on both source and target template images prior to 
+#        registration.
+#       The default performs a median filter of radius 4 in each dimension, which 
+#        is effective for registering auto-fluroescence data.
+#
+#   elastix-parameter-files:
+#       The names of the files that specify the elastix parameters for registering 
+#        source to target.
+#       The default registration optimises an Affine followed by a BSpline transform, 
+#        with parameters optimised for mouse  CNS autofluorescence data pre-filtered 
+#        with the autofl-filter.
+#
+#   transform-parameter-files:
+#       The names of the files to save the elastix transforms to.
+#
+#   save-template:
+#       Boolean to indicate whether the target template image should be saved to 
+#        disk after registration.
+#
+#   save-annotations:
+#       Boolean to indicate whether any target annotation images and any linked 
+#        structure tree CSV files should be saved to disk after downsampling.
+#
+#   save-images:
+#       Boolean to indicate whether all other target images should be saved to 
+#        disk after registration.
+#
+#   prefix:
+#       This prefix is put on the front of each file name that is saved to disk.
+#
+#   save-image-type:
+#       Defines what image type any downsampled image saved to disk should be saved 
+#        as. Definition is based on image extension.  Default is "nrrd", which is 
+#        preferred as it adds data compression to storage.
+#       MUST be a VALID simpleITK image type : nrrd, tiff, mhd 
+#        see https://simpleitk.readthedocs.io/en/master/IO.html
+#
+target-to-source-output: ccf_to_sample
+target-to-source-filter: brainregister:autofl-filter
+target-to-source-elastix-parameter-files:
+- brainregister:affine
+- brainregister:bspline
+target-to-source-transform-parameter-files:
+- brainregister-affine_downsampled-to-target.txt
+- brainregister-bspline_downsampled-to-target.txt
+target-to-source-save-template: true
+target-to-source-save-annotations: true
+target-to-source-save-images: true
+target-to-source-prefix: SMP_
+target-to-source-save-image-type: nrrd

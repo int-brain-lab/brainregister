@@ -1,0 +1,1 @@
+include brainregister/resources/*.txtinclude brainregister/resources/*.yamlinclude brainregister/resources/elastix-parameter-files/*.txtinclude brainregister/resources/transformix-parameter-files/*.txtinclude brainregister/resources/allen-ccf/*.nrrdinclude brainregister/resources/allen-ccf/*.yamlinclude brainregister/resources/allen-ccf/*.csv

@@ -1,0 +1,54 @@
+---
+##############################
+### TARGET PARAMETERS FILE ###
+##############################
+
+# This file defines TARGET parameters for the brainregister package.
+# files : template & annotations image paths, structure tree CSV path
+# image parameters: image resolution, size & orientation
+
+# The paths defines the relative paths to the TARGET resources.
+#     target-template-path   : greyscale image stack of auto-fluorescence data to 
+#                              register sample images to.
+#     target-annotations-path : List of labelled image(s) representing annotated 
+#                               regions in the template image.
+#     target-structure-tree  : List of CSV files that includes metadata on the annotated
+#                            regions in the annotation image. Each line defines
+#                            metadata relating to the annotated region labelled
+#                            with the INDEX of that line in the file.  Eg. the
+#                            first line (index 0) specifies metadata relating
+#                            to the annotated region in annotation image that has
+#                            the pixel value '0' (typically the background pixels!).
+#                            To link structure tree files with a specific annotation,
+#                            should prefix the structure tree CSV with the annotations
+#                            filename.
+target-template-path: coronal_rc_25_template.nrrd
+target-annotations-path: 
+- coronal_rc_25_annotation.nrrd
+target-structure-tree: 
+- coronal_rc_25_annotation_tree.csv
+
+
+# The parameters define key information about the TARGET needed for registration:
+#   resolution: target resolution in XYZ - typically in um
+#   size: target image size in pixels in XYZ
+#   location - Approximate location of the sample template in the target-template space.
+#       structure: What structure is in the sample template.
+#           Allen CCF: break whole CNS into 16 quadrants (4 coronal, 2 sagittal, 2 horizontal)
+#             CNS-<LT,RT>-<OLF,FB,MB,HB>-<UPPER,LOWER>
+#       orientation: How is the sample-template oriented
+#           Specify which AXIS and its DIRECTION each image dimension is (XYZ) -> LR:SI:PA
+#               mediolateral: <LR,RL> for left/right direction
+#               dorsoventral: <SI,IS> for superior/inferior direction
+#               anteroposterior: <AP,PA> for anterior/posterior direction
+#           See documentation: 
+target-template-resolution:
+  x-um: 25.0
+  y-um: 25.0
+  z-um: 25.0
+target-template-size:
+  x: 456
+  y: 320
+  z: 528
+target-template-structure: "CNS"
+target-template-orientation: "LR:SI:PA"
