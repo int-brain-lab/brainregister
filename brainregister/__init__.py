@@ -374,10 +374,10 @@ class BrainRegister(object):
             print('')
             print('\033[1;31m ERROR : ' + 
                   ' image resolution not set in brainregister_params : ' + 
-                      self.yaml_path + ' \033[0;0m')
+                      str(self.yaml_path) + ' \033[0;0m')
             print('')
             sys.exit( str('ERROR :  image resolution not set in brainregister_params : ' + 
-                      self.yaml_path) )
+                      str(self.yaml_path) ) )
         
         
     
