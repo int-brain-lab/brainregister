@@ -72,12 +72,19 @@ def main():
              YAML file containing all the parameters to perform brain registration.
              Modify this for registration of the input sample-template and associated
              images.
+             
+             This can be customised as follows:
+            brainregister --yaml path/to/sample-template.nrrd -d ./br-output -t ./custom-br-template.yaml -n br_params.yaml
+            
+             Here, the custom template 'custom-br-template.yaml' from working DIR is used, and
+             this is saved to ./br-output/br_params.yaml.
             
             # then perform brainregister registration
             
             brainregister path/to/brainregister-parameters.yaml
             
-              This performs the complete brain registration.
+              This performs the complete brain registration. All parameters for registration are specified
+              in the YAML parameters file.
         ''') 
         
         )
@@ -100,18 +107,44 @@ def main():
             the brainregister_parameters.yaml file.  The default is ./brainregister/
             '''))
     
+    parser.add_argument('-t', '--template', type = str, 
+                        help=textwrap.dedent('''\
+            Specify the relative path where a template brainregister parameters 
+            exists.  Use this to utilise a custom brainregister_parameters.yaml
+            file with custom default values.
+            '''))
+    
+    parser.add_argument('-n', '--name', type = str, 
+                        help=textwrap.dedent('''\
+            Specify the name of the output brainregister parameters file.  Use 
+            this to spaecify a custom name for this file.  The default is
+            brainregister_parameters.yaml.
+            '''))
+    
     
     args = parser.parse_args()
     
-    # process data according to yaml and filepath args
     if args.dirpath:
-        process(args.yaml, Path(args.file_path), args.dirpath )
+        dirpath = args.dirpath
     else:
-        process(args.yaml, Path(args.file_path), 'brainregister' )
+        dirpath = 'brainregister'
+    
+    if args.template:
+        template = args.template
+    else:
+        template = 'brainregister_params'
+    
+    if args.name:
+        name = args.name
+    else:
+        name = 'brainregister_parameters.yaml'
+    
+    process(args.yaml, Path(args.file_path), dirpath, template, name )
+    
 
 
 
-def process(yaml, file_path, brainregister_dir):
+def process(yaml, file_path, brainregister_dir, template, name):
     '''Process : admin function to call create_parameters_file() of register()
 
     If yaml is true create a brainregister_parameters file, otherwise 
@@ -129,6 +162,22 @@ def process(yaml, file_path, brainregister_dir):
         registration will be optimised).  Else if yaml is false, this should 
         point to a brainregister-parameters.yaml file. Converted to PosixPath 
         object if only a string.
+    
+    brainregister_dir : str OR PosixPath
+        A path to where the brainregister parameters yaml file should be stored,
+        IF a brainregister_parameters file is being generated.  Otherwise this is
+        IGNORED.
+    
+    template : str
+        String representing a VALID PATH in the filesystem pointing to a VALID
+        brianregister_parameters file to use as a CUSTOM TEMPLATE.  Use this to
+        overwrite the default template, IF a brainregister_parameters file is 
+        being generated.  Otherwise this is IGNORED.
+    
+    name : str
+        The name of the output brainregister parameters yaml file, IF a 
+        brainregister_parameters file is being generated.  Otherwise this is
+        IGNORED.
 
     Returns
     -------
@@ -140,7 +189,9 @@ def process(yaml, file_path, brainregister_dir):
     
     if yaml:
         brainregister.create_parameters_file( Path(file_path), 
-                                             output_dir = Path(brainregister_dir) )
+                                             output_dir = Path(brainregister_dir),
+                                             brainregister_params_template_path = template,
+                                             brainregister_params_filename = name)
     else:
         br = BrainRegister(Path(file_path))
         br.register()
