@@ -12,6 +12,7 @@ __author__ = 'Steven J. West'
 
 # package imports
 import os
+import shutil
 import glob
 import sys
 import gc
@@ -2153,6 +2154,7 @@ class BrainRegister(object):
         if (self.downsampling_img == 'source'):
             #source-to-target-downsampling-save-annotations
             if self.brp['source-to-target-downsampling-save-annotations'] == True:
+                
                 # now transform and save each sample annotation
                 if self.source_anno_path != []:
                     print('')
@@ -2166,6 +2168,30 @@ class BrainRegister(object):
                     print('')
                     print('  transforming and saving source annotations to ds : no annotations to process')
                     print('')
+                
+                
+                # ALSO copy the annotation structure tree files
+                if self.source_tree_path != []:
+                    print('')
+                    print('  transforming and saving source annotation structure trees to ds..')
+                    
+                    for i, st_path in enumerate(self.source_tree_path):
+                        
+                        if self.source_tree_path_ds[i].exists() == False:
+                            print('  copying source annotation structure tree to ds : '+
+                                  str( self.source_tree_path_ds[i].resolve() ) )
+                            shutil.copy(st_path, self.source_tree_path_ds[i])
+                        else:
+                            print('  source annotation structure tree to ds exists : '+
+                                  str( self.source_tree_path_ds[i].resolve() ) )
+                        #self.process_anno_ds(i)
+                    
+                else:
+                    print('')
+                    print('  transforming and saving source annotation structure tree to ds : no trees to process')
+                    print('')
+                
+                
             else:
                 print('')
                 print('  transforming and saving source annotations to ds : not requested')
@@ -2176,6 +2202,7 @@ class BrainRegister(object):
         elif (self.downsampling_img == 'target'):
             #target-to-source-downsampling-save-annotations
             if self.brp['target-to-source-downsampling-save-annotations'] == True:
+                
                 # now transform and save each sample annotation
                 if self.target_anno_path != []:
                     print('')
@@ -2189,6 +2216,30 @@ class BrainRegister(object):
                     print('')
                     print('  transforming and saving target annotations to ds : no annotations to process')
                     print('')
+                
+                
+                # ALSO copy the annotation structure tree files
+                if self.target_tree_path != []:
+                    print('')
+                    print('  transforming and saving target annotation structure tree to ds..')
+                    
+                    for i, st_path in enumerate(self.target_tree_path):
+                        
+                        if self.target_tree_path_ds[i].exists() == False:
+                            print('  copying target annotation structure tree to ds : '+
+                                  str( self.target_tree_path_ds[i].resolve() ) )
+                            shutil.copy(st_path, self.target_tree_path_ds[i])
+                        else:
+                            print('  target annotation structure tree to ds exists : '+
+                                  str( self.target_tree_path_ds[i].resolve() ) )
+                        #self.process_anno_ds(i)
+                    
+                else:
+                    print('')
+                    print('  transforming and saving target annotation structure tree to ds : no trees to process')
+                    print('')
+                
+                
             else:
                 print('')
                 print('  transforming and saving target annotations to ds : not requested')
@@ -3203,7 +3254,8 @@ class BrainRegister(object):
         transform_params.sort() # into ASCENDING ORDER
         
         for i, tp in enumerate(transform_params):
-            os.rename(tp, str(pm_paths[i]) )
+            shutil.move( tp, str(pm_paths[i]) ) # works across file systems!
+            #os.rename(tp, str(pm_paths[i]) )
         
         
     
@@ -3332,7 +3384,29 @@ class BrainRegister(object):
                 print('')
                 print('  source annotations to target : no annotation images')
                 print('')
-        
+            
+            
+            # ALSO SAVE the structure trees associated with the annos
+            if self.source_tree_path_target != []: # not a blank list
+                print('')
+                print('  source annotation structure tree to target : ')
+                print('')
+                for i,st_path in enumerate(self.source_tree_path):
+                    # source_anno_path + _ds + _target all are SAME LENGTH!
+                    if self.source_tree_path_target[i].exists() == False:
+                        print('  copying annotation structure tree to target ' + 
+                          str(self.source_tree_path_target[i].resolve()))
+                        shutil.copy(st_path, self.source_tree_path_target[i])
+                    else:
+                        print('  annotation structure tree to target exists : ' + 
+                          str(self.source_tree_path_target[i].resolve()))
+                    #anno_img = self.get_src_tree_tar(i)
+                    #self.save_src_tree_tar(i, anno_img)
+            else:
+                print('')
+                print('  source annotation structure trees to target : no trees to process')
+                print('')
+            
         else:
             print('')
             print('  saving source annotations to target : not requested')
@@ -3409,6 +3483,29 @@ class BrainRegister(object):
                 print('')
                 print('  target annotations to source : no annotation images')
                 print('')
+            
+            
+            # ALSO SAVE the structure trees associated with the annos
+            if self.target_tree_path_source != []: # not a blank list
+                print('')
+                print('  target annotation structure tree to source : ')
+                print('')
+                for i,st_path in enumerate(self.target_tree_path):
+                    # source_anno_path + _ds + _target all are SAME LENGTH!
+                    if self.target_tree_path_source[i].exists() == False:
+                        print('  copying annotation structure tree to source ' + 
+                          str(self.target_tree_path_source[i].resolve()))
+                        shutil.copy(st_path, self.target_tree_path_source[i])
+                    else:
+                        print('  annotation structure tree to source exists : ' + 
+                          str(self.target_tree_path_source[i].resolve()))
+                    #anno_img = self.get_src_tree_tar(i)
+                    #self.save_src_tree_tar(i, anno_img)
+            else:
+                print('')
+                print('  target annotation structure trees to source : no trees to process')
+                print('')
+            
         
         else:
             print('')
@@ -4667,6 +4764,28 @@ class BrainRegister(object):
                     print('')
                     
                 
+                
+                # ALSO SAVE the structure trees associated with the annos
+                if self.target_tree_path_ds != []: # not a blank list
+                    print('')
+                    print('  target annotation structure tree to ds : ')
+                    print('')
+                    for i,st_path in enumerate(self.target_tree_path):
+                        # source_anno_path + _ds + _target all are SAME LENGTH!
+                        if self.target_tree_path_ds[i].exists() == False:
+                            print('  copying annotation structure tree to ds ' + 
+                              str(self.target_tree_path_ds[i].resolve()))
+                            shutil.copy(st_path, self.target_tree_path_ds[i])
+                        else:
+                            print('  annotation structure tree to ds exists : ' + 
+                              str(self.target_tree_path_ds[i].resolve()))
+                        #anno_img = self.get_src_tree_tar(i)
+                        #self.save_src_tree_tar(i, anno_img)
+                else:
+                    print('')
+                    print('  transforming and saving target annotation structure tree to ds : no trees to process')
+                    print('')
+                
             else:
                 print('')
                 print('  transforming and saving target annotations to downsampled source image space : not requested')
@@ -4725,6 +4844,29 @@ class BrainRegister(object):
                     print('')
                     print('  transforming and saving source annotations to downsampled target image space : no annotations to process')
                     print('')
+                
+                
+                # ALSO SAVE the structure trees associated with the annos
+                if self.source_tree_path_ds != []: # not a blank list
+                    print('')
+                    print('  source annotation structure tree to ds : ')
+                    print('')
+                    for i,st_path in enumerate(self.source_tree_path):
+                        # source_anno_path + _ds + _target all are SAME LENGTH!
+                        if self.source_tree_path_ds[i].exists() == False:
+                            print('  copying annotation structure tree to ds ' + 
+                              str(self.source_tree_path_ds[i].resolve()))
+                            shutil.copy(st_path, self.source_tree_path_ds[i])
+                        else:
+                            print('  annotation structure tree to ds exists : ' + 
+                              str(self.source_tree_path_ds[i].resolve()))
+                        #anno_img = self.get_src_tree_tar(i)
+                        #self.save_src_tree_tar(i, anno_img)
+                else:
+                    print('')
+                    print('  transforming and saving source annotation structure tree to ds : no trees to process')
+                    print('')
+                
                 
             else:
                 print('')
