@@ -290,14 +290,22 @@ class BrainRegister(object):
     def register(self):
         
         self.register_transform_highres_to_downsampled()
+        # discard from memory all images/martices not needed - just point vars to blank list!
+        garbage = gc.collect() # run garbage collection to ensure memory is freed
         
         self.register_source_to_target()
         self.transform_source_to_target()
+        # discard from memory all images/martices not needed - just point vars to blank list!
+        garbage = gc.collect() # run garbage collection to ensure memory is freed
         
         self.register_target_to_source()
         self.transform_target_to_source()
+        # discard from memory all images/martices not needed - just point vars to blank list!
+        garbage = gc.collect() # run garbage collection to ensure memory is freed
         
         self.transform_lowres_to_downsampled()
+        # discard from memory all images/martices not needed - just point vars to blank list!
+        garbage = gc.collect() # run garbage collection to ensure memory is freed
         
         self.save_target_params()
         
@@ -2518,12 +2526,19 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.source_template_img_target = self.register_image(
-                                                        self.source_template_img_ds, 
-                                                        self.target_template_img, 
-                                                        self.src_tar_ep )
+                    self.register_image(self.source_template_img_ds, 
+                                        self.target_template_img, 
+                                        self.src_tar_ep )
+                    # FREE MEMORY
+                    self.target_template_img = None
+                    self.source_template_img_ds = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     
                 elif self.src_tar_prefiltered == True:
+                    # FREE MEMORY
+                    self.target_template_img = None
+                    self.source_template_img_ds = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
                     print('  registering source to target after prefilter..')
                     print('    source : ' + 
@@ -2534,10 +2549,13 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.source_template_img_target_filt = self.register_image(
-                                                        self.source_template_img_ds_filt, 
-                                                        self.target_template_img_filt, 
-                                                        self.src_tar_ep )
+                    self.register_image(self.source_template_img_ds_filt, 
+                                        self.target_template_img_filt,
+                                        self.src_tar_ep )
+                    # FREE MEMORY
+                    self.source_template_img_ds_filt = None
+                    self.target_template_img_filt = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
                 print('  saving source to target parameter map file[s]..')
                 self.save_pm_files( self.src_tar_pm_paths )
@@ -2588,12 +2606,19 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.source_template_img_target = self.register_image(
-                                                        self.source_template_img, 
-                                                        self.target_template_img_ds, 
-                                                        self.src_tar_ep )
+                    self.register_image(self.source_template_img, 
+                                        self.target_template_img_ds, 
+                                        self.src_tar_ep )
+                    # FREE MEMORY
+                    self.source_template_img = None 
+                    self.target_template_img_ds = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     
                 elif self.src_tar_prefiltered == True:
+                    # FREE MEMORY
+                    self.source_template_img = None 
+                    self.target_template_img_ds = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
                     print('  registering source to target after prefilter..')
                     print('    source : ' + 
@@ -2604,10 +2629,13 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.source_template_img_target_filt = self.register_image(
-                                                        self.source_template_img_filt, 
-                                                        self.target_template_img_ds_filt, 
-                                                        self.src_tar_ep )
+                    self.register_image(self.source_template_img_filt, 
+                                        self.target_template_img_ds_filt,
+                                        self.src_tar_ep )
+                    # FREE MEMORY
+                    self.source_template_img_filt = None 
+                    self.target_template_img_ds_filt = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
                 print('  saving source to target parameter map file[s]..')
                 self.save_pm_files( self.src_tar_pm_paths )
@@ -2651,12 +2679,19 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.source_template_img_target = self.register_image(
-                                                        self.source_template_img, 
-                                                        self.target_template_img, 
-                                                        self.src_tar_ep )
+                    self.register_image(self.source_template_img, 
+                                        self.target_template_img, 
+                                        self.src_tar_ep )
+                    # FREE MEMORY
+                    self.source_template_img = None
+                    self.target_template_img = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     
                 elif self.src_tar_prefiltered == True:
+                    # FREE MEMORY
+                    self.source_template_img = None
+                    self.target_template_img = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
                     print('  registering source to target after prefilter..')
                     print('    source : ' + 
@@ -2667,10 +2702,13 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.source_template_img_target_filt = self.register_image(
-                                                        self.source_template_img_filt, 
-                                                        self.target_template_img_filt, 
-                                                        self.src_tar_ep )
+                    self.register_image(self.source_template_img_filt, 
+                                        self.target_template_img_filt, 
+                                        self.src_tar_ep )
+                    # FREE MEMORY
+                    self.source_template_img_filt = None
+                    self.target_template_img_filt = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
                 print('  saving source to target parameter map file[s]..')
                 self.save_pm_files( self.src_tar_pm_paths )
@@ -2738,12 +2776,19 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.target_template_img_source = self.register_image( 
-                                                        self.target_template_img, 
-                                                        self.source_template_img_ds, 
-                                                        self.tar_src_ep )
+                    self.register_image( self.target_template_img, 
+                                        self.source_template_img_ds, 
+                                        self.tar_src_ep )
+                    # FREE MEMORY
+                    self.target_template_img = None
+                    self.source_template_img_ds = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     
                 elif self.tar_src_prefiltered == True:
+                    # FREE MEMORY
+                    self.target_template_img = None
+                    self.source_template_img_ds = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
                     print('  registering target to source after prefilter..')
                     print('    target : ' + 
@@ -2754,10 +2799,13 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.target_template_img_source_filt = self.register_image(
-                                                        self.target_template_img_filt, 
-                                                        self.source_template_img_ds_filt, 
-                                                        self.tar_src_ep )
+                    self.register_image(self.target_template_img_filt, 
+                                        self.source_template_img_ds_filt, 
+                                        self.tar_src_ep )
+                    # FREE MEMORY
+                    self.target_template_img_filt = None
+                    self.source_template_img_ds_filt = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
                 print('  saving target to source parameter map file[s]..')
                 self.save_pm_files( self.tar_src_pm_paths )
@@ -2803,12 +2851,19 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.target_template_img_source = self.register_image(
-                                                        self.target_template_img_ds, 
-                                                        self.source_template_img, 
-                                                        self.tar_src_ep )
+                    self.register_image(self.target_template_img_ds, 
+                                        self.source_template_img,
+                                        self.tar_src_ep )
+                    # FREE MEMORY
+                    self.target_template_img_ds = None
+                    self.source_template_img = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     
                 elif self.tar_src_prefiltered == True:
+                    # FREE MEMORY
+                    self.target_template_img_ds = None
+                    self.source_template_img = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
                     print('  registering target to source after prefilter..')
                     print('    target : ' + 
@@ -2819,10 +2874,13 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.target_template_img_source_filt = self.register_image(
-                                                        self.target_template_img_ds_filt, 
-                                                        self.source_template_img_filt, 
-                                                        self.tar_src_ep )
+                    self.register_image(self.target_template_img_ds_filt, 
+                                        self.source_template_img_filt, 
+                                        self.tar_src_ep )
+                    # FREE MEMORY
+                    self.target_template_img_ds_filt = None
+                    self.source_template_img_filt = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
                 print('  saving source to target parameter map file[s]..')
                 self.save_pm_files( self.tar_src_pm_paths )
@@ -2862,12 +2920,19 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.target_template_img_source = self.register_image(
-                                                        self.target_template_img, 
-                                                        self.source_template_img, 
-                                                        self.tar_src_ep )
+                    self.register_image(self.target_template_img, 
+                                        self.source_template_img, 
+                                        self.tar_src_ep )
+                    # FREE MEMORY
+                    self.target_template_img = None
+                    self.source_template_img = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     
                 elif self.tar_src_prefiltered == True:
+                    # FREE MEMORY
+                    self.target_template_img = None
+                    self.source_template_img = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
                     print('  registering target to source after prefilter..')
                     print('    target : ' + 
@@ -2878,10 +2943,13 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.target_template_img_source_filt = self.register_image(
-                                                        self.target_template_img_filt, 
-                                                        self.source_template_img_filt, 
-                                                        self.tar_src_ep )
+                    self.register_image(self.target_template_img_filt,
+                                        self.source_template_img_filt, 
+                                        self.tar_src_ep )
+                    # FREE MEMORY
+                    self.target_template_img_filt = None
+                    self.source_template_img_filt = None
+                    garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
                 print('  saving source to target parameter map file[s]..')
                 self.save_pm_files( self.tar_src_pm_paths )
@@ -3380,11 +3448,13 @@ class BrainRegister(object):
                     # save to local var, do not hold onto refs with self.source_image_img_target[i].append()
                     # user can use load_src_anno_tar() to do this!s
                     self.save_src_anno_tar(i, anno_img)
+                    anno_img = None # GUARANTEE memory is freed
+                    garbage = gc.collect()
             else:
                 print('')
                 print('  source annotations to target : no annotation images')
                 print('')
-            
+                
             
             # ALSO SAVE the structure trees associated with the annos
             if self.source_tree_path_target != []: # not a blank list
@@ -3427,6 +3497,8 @@ class BrainRegister(object):
                     # save to local var, do not hold onto refs with self.source_image_img_target[i].append()
                     # user can use load_src_images_tar() to do this!s
                     self.save_src_image_tar(i, img_tar)
+                    img_Tar = None
+                    garbage = gc.collect()
             else:
                 print('')
                 print('  source images to target : no further images')
@@ -3438,7 +3510,7 @@ class BrainRegister(object):
             print('')
             
         
-        # discard from memory all images/martices not needed - just point vars to blank list!
+        # discard from memory all images/martices not needed - just point vars to None
         garbage = gc.collect() # run garbage collection to ensure memory is freed
         
         
@@ -3479,6 +3551,8 @@ class BrainRegister(object):
                     # save to local var, do not hold onto refs with self.source_image_img_target[i].append()
                     # user can use load_src_anno_tar() to do this!s
                     self.save_tar_anno_src(i, anno_img)
+                    anno_img = None
+                    garbage = gc.collect()
             else:
                 print('')
                 print('  target annotations to source : no annotation images')
@@ -3527,6 +3601,8 @@ class BrainRegister(object):
                     # save to local var, do not hold onto refs with self.source_image_img_target[i].append()
                     # user can use load_src_images_tar() to do this!s
                     self.save_tar_image_src(i, img_tar)
+                    img_tar = None
+                    garbage = gc.collect()
             else:
                 print('')
                 print('  target images to source : no further images')
@@ -3585,8 +3661,11 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    return self.transform_image(self.source_template_img_ds, 
+                    img = self.transform_image(self.source_template_img_ds, 
                                                   self.src_tar_pm )
+                    self.source_template_img_ds = None
+                    garbage = gc.collect() # discard from memory
+                    return img
                 
                 else:
                     print('  downsampled source template to target space exists - returning image..')
@@ -3594,8 +3673,8 @@ class BrainRegister(object):
             
             else:
                 print('  downsampled source template to target space exists - loading image..')
-                self.source_template_img_target = self.load_image(self.source_template_path_target)
-                return self.source_template_img_target
+                return self.load_image(self.source_template_path_target)
+                #return self.source_template_img_target
             
             
         elif (self.downsampling_img == 'target'):
@@ -3630,9 +3709,13 @@ class BrainRegister(object):
                     print('')
                     img = self.transform_image(self.source_template_img, 
                                                   self.src_tar_pm )
-                    
+                    self.source_template_img = None
+                    garbage = gc.collect() # discard from memory
                     # and move source to ds target from ds target to raw target
-                    return self.move_image_ds_img(img)
+                    img_ds = self.move_image_ds_img(img)
+                    img = None
+                    garbage = gc.collect() # discard from memory
+                    return img_ds
                     
                 else:
                     print('  source template to target space exists - returning image..')
@@ -3640,8 +3723,8 @@ class BrainRegister(object):
             
             else:
                 print('  source template to target space exists - loading image..')
-                self.source_template_img_target = self.load_image(self.source_template_path_target)
-                return self.source_template_img_target
+                return self.load_image(self.source_template_path_target)
+                #return self.source_template_img_target
         
         
         elif (self.downsampling_img == 'none'):
@@ -3673,8 +3756,11 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    return self.transform_image(self.source_template_img, 
+                    img = self.transform_image(self.source_template_img, 
                                                   self.src_tar_pm )
+                    self.source_template_img = None
+                    garbage = gc.collect() # discard from memory
+                    return img
                 
                 else:
                     print('  source template to target space exists - returning image..')
@@ -3682,8 +3768,8 @@ class BrainRegister(object):
             
             else:
                 print('  source template to target space exists - loading image..')
-                self.source_template_img_target = self.load_image(self.source_template_path_target)
-                return self.source_template_img_target
+                return self.load_image(self.source_template_path_target)
+                #return self.source_template_img_target
         
     
     
@@ -3695,6 +3781,10 @@ class BrainRegister(object):
                 print('  saving source template to target : ' + 
                       self.get_relative_path(self.source_template_path_target))
                 self.save_image(self.source_template_img_target, self.source_template_path_target)
+                # FREE MEMORY
+                self.source_template_img_target = None
+                garbage = gc.collect()
+                
             else:
                 print('  source template in target space does not exist - run get_src_template_tar()')
                 
@@ -4084,8 +4174,11 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    return self.transform_image(self.target_template_img_ds, 
+                    img = self.transform_image(self.target_template_img_ds, 
                                                   self.tar_src_pm )
+                    self.target_template_img_ds = None
+                    garbage = gc.collect() # discard from memory
+                    return img
                 
                 else:
                     print('  downsampled target template to source space exists - returning image..')
@@ -4093,8 +4186,8 @@ class BrainRegister(object):
             
             else:
                 print('  downsampled target template to source space exists - loading image..')
-                self.target_template_img_source = self.load_image(self.target_template_path_source)
-                return self.target_template_img_source
+                return self.load_image(self.target_template_path_source)
+                #return self.target_template_img_source
             
             
         elif (self.downsampling_img == 'source'):
@@ -4129,9 +4222,13 @@ class BrainRegister(object):
                     print('')
                     img = self.transform_image(self.target_template_img, 
                                                   self.tar_src_pm )
-                    
+                    self.target_template_img = None
+                    garbage = gc.collect() # discard from memory
                     # and move source to ds target from ds target to raw target
-                    return self.move_image_ds_img(img)
+                    img_ds = self.move_image_ds_img(img)
+                    img = None
+                    garbage = gc.collect() # discard from memory
+                    return img_ds
                     
                 else:
                     print('  target template to source space exists - returning image..')
@@ -4139,8 +4236,8 @@ class BrainRegister(object):
             
             else:
                 print('  target template to source space exists - loading image..')
-                self.target_template_img_source = self.load_image(self.target_template_path_source)
-                return self.target_template_img_source
+                return self.load_image(self.target_template_path_source)
+                #return self.target_template_img_source
         
         
         elif (self.downsampling_img == 'none'):
@@ -4172,8 +4269,11 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    return self.transform_image(self.target_template_img, 
+                    img = self.transform_image(self.target_template_img, 
                                                   self.src_tar_pm )
+                    self.target_template_img = None
+                    garbage = gc.collect() # discard from memory
+                    return img
                 
                 else:
                     print('  target template to source space exists - returning image..')
@@ -4181,8 +4281,8 @@ class BrainRegister(object):
             
             else:
                 print('  target template to source space exists - loading image..')
-                self.target_template_img_source = self.load_image(self.target_template_path_source)
-                return self.target_template_img_source
+                return self.load_image(self.target_template_path_source)
+                #return self.target_template_img_source
         
     
     
@@ -4194,6 +4294,8 @@ class BrainRegister(object):
                 print('  saving target template to source : ' + 
                       self.get_relative_path(self.target_template_path_source))
                 self.save_image(self.target_template_img_source, self.target_template_path_source)
+                self.target_template_img_source = None
+                garbage = gc.collect() # ENSURE data is removed from memory
             else:
                 print('  target template in source space does not exist - run get_tar_template_src()')
                 
