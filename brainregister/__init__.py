@@ -1987,10 +1987,17 @@ class BrainRegister(object):
         
         transformixImageFilter.SetMovingImage(template_img)
         
-        transformixImageFilter.Execute()
+        transformixImageFilter.Execute() 
+        # this will ALWAYS consume a MINIMUM of 4x the OUTPUT IMAGE SIZE
+        # i.e if the output image will be 6GB, max memory consumption is ~24GB
         
         img = transformixImageFilter.GetResultImage()
-        img.SetSpacing( tuple([1.0, 1.0, 1.0]) )
+        # set spacing DUPLICATES the image in memory
+        # to prevent OOM error, must DISCARD tif FIRST
+        transformixImageFilter = None
+        garbage = gc.collect() # should discard and collect memory to free it!
+        # DO NOT NEED THIS as the Spacing is defined in TransformParams file as 1,1,1!
+        #img.SetSpacing( tuple([1.0, 1.0, 1.0]) )
         
         
         print('')
@@ -1998,7 +2005,7 @@ class BrainRegister(object):
         print('')
         print('')
         
-        # cast to the original image bitdepth
+        # cast to the original image bitdepth as needed
         # output is 32-bit float - convert this to the ORIGINAL image type!
         img = self.cast_image(template_img, img)
         
@@ -2007,59 +2014,29 @@ class BrainRegister(object):
         
     
     
-    def cast_image(self, sample_template_img, sample_template_ds):
+    def cast_image(self, img, img_t):
 
-        # get the minimum and maximum values in sample_template_img
+        # get the minimum and maximum values in img
         minMax = sitk.MinimumMaximumImageFilter()
-        minMax.Execute(sample_template_img)
+        minMax.Execute(img)
         
-        # cast with numpy - as sitk casting has weird rounding errors..?
-        sample_template_ds_np = sitk.GetArrayFromImage(sample_template_ds)
+        # to be MEMORY EFFICIENT will use the ClampImageFilter
+        clamp = sitk.ClampImageFilter()
+        clamp.SetLowerBound(minMax.GetMinimum())
+        clamp.SetUpperBound(minMax.GetMaximum())
+        img_t = clamp.Execute(img_t)
+        # now any pixels in output image will be in the bound of the input min/max
+        # this overcomes “overshoot-property” of higher-order B-spline interpolation
         
-        # first rescale the pixel values to those in the original matrix
-        # THIS IS NEEDED as sometimes the rescaling produces values above or below
-        # the ORIGINAL IMAGE - clearly this is an error, so just crop the pixel values
-        # check the number of pixels below the Minimum for example:
-        #np.count_nonzero(sample_template_ds_np < minMax.GetMinimum())
+        # NOW cast the image
+        # cannot do this before, as the cast converts pixels bit-wise
+        # this may result in aberrant pixel values if there is any overshoot pixels
+        # eg. if pixels are set to BELOW 0.0 they will come up as HIGH PIXEL VALS when
+        # cast to an unsigned pixel type..
+        img_t = sitk.Cast(img_t, img.GetPixelID())
+        img_t.SetSpacing( tuple([1.0, 1.0, 1.0]) ) # can do this to be sure spacing is set!
         
-        sample_template_ds_np[ 
-            sample_template_ds_np < 
-            minMax.GetMinimum() ] = minMax.GetMinimum()
         
-        sample_template_ds_np[ 
-            sample_template_ds_np > 
-            minMax.GetMaximum() ] = minMax.GetMaximum()
-        
-        # NO NEED TO CAST NOW - this can be incorrect as if one pixel is aberrantly set below
-        # 0 by a long way by registration quirks, this permeates into this casting, 
-        # where the 0 pixels are artifically pushed up
-        #sample_template_ds_cast = np.interp(
-        #    sample_template_ds_np, 
-        #    ( sample_template_ds_np.min(), sample_template_ds_np.max() ), 
-        #    ( minMax.GetMinimum(), minMax.GetMaximum() ) 
-        #        )
-        
-        # then CONVERT matrix to correct datatype
-        if sample_template_img.GetPixelIDTypeAsString() == '16-bit signed integer':
-            sample_template_ds_np = sample_template_ds_np.astype('int16')
-            
-        elif sample_template_img.GetPixelIDTypeAsString() == '8-bit signed integer':
-            sample_template_ds_np = sample_template_ds_np.astype('int8')
-            
-        elif sample_template_img.GetPixelIDTypeAsString() == '8-bit unsigned integer':
-            sample_template_ds_np = sample_template_ds_np.astype('uint8')
-            
-        elif sample_template_img.GetPixelIDTypeAsString() == '16-bit unsigned integer':
-            sample_template_ds_np = sample_template_ds_np.astype('uint16')
-            
-        else: # default cast to unsigned 16-bit
-            sample_template_ds_np = sample_template_ds_np.astype('uint16')
-        
-        # discard the np array
-        #sample_template_ds_np = None
-        
-        img = sitk.GetImageFromArray( sample_template_ds_np )
-        img.SetSpacing( tuple([1.0, 1.0, 1.0]) )
         return img
         
 
@@ -3307,9 +3284,9 @@ class BrainRegister(object):
         print('')
         
         # get the registered image
-        img = elastixImageFilter.GetResultImage()
-        img.SetSpacing( tuple([1.0, 1.0, 1.0]) )
-        return img
+        #img = elastixImageFilter.GetResultImage()
+        #img.SetSpacing( tuple([1.0, 1.0, 1.0]) )
+        #return img
     
     
     
@@ -3654,7 +3631,7 @@ class BrainRegister(object):
                             self.get_relative_path(self.source_template_path_ds) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target paramter map file '+
+                        print('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
@@ -3700,7 +3677,7 @@ class BrainRegister(object):
                             self.get_relative_path(self.source_template_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-downsampled-target paramter map file '+
+                        print('    source-to-downsampled-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
@@ -3749,7 +3726,7 @@ class BrainRegister(object):
                             self.get_relative_path(self.source_template_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target paramter map file '+
+                        print('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
@@ -3827,7 +3804,7 @@ class BrainRegister(object):
                     print('    image : ' + self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target paramter map file '+
+                        print('    source-to-target parameter map file '+
                                 str(i) + ' : ' + self.get_relative_path(pm) )
                     print('========================================================================')
                     print('')
@@ -3995,7 +3972,7 @@ class BrainRegister(object):
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target paramter map file '+
+                        print('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     print('========================================================================')
@@ -4039,7 +4016,7 @@ class BrainRegister(object):
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target paramter map file '+
+                        print('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     print('========================================================================')
@@ -4083,7 +4060,7 @@ class BrainRegister(object):
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target paramter map file '+
+                        print('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     print('========================================================================')
@@ -4167,7 +4144,7 @@ class BrainRegister(object):
                             self.get_relative_path(self.target_template_path_ds) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source paramter map file '+
+                        print('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
@@ -4213,7 +4190,7 @@ class BrainRegister(object):
                             self.get_relative_path(self.target_template_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-downsampled source paramter map file '+
+                        print('    target-to-downsampled source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
@@ -4262,7 +4239,7 @@ class BrainRegister(object):
                             self.get_relative_path(self.target_template_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source paramter map file '+
+                        print('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
@@ -4338,7 +4315,7 @@ class BrainRegister(object):
                     print('    image : ' + self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source paramter map file '+
+                        print('    target-to-source parameter map file '+
                                 str(i) + ' : ' + self.get_relative_path(pm) )
                     print('========================================================================')
                     print('')
@@ -4508,7 +4485,7 @@ class BrainRegister(object):
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source paramter map file '+
+                        print('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     print('========================================================================')
@@ -4553,7 +4530,7 @@ class BrainRegister(object):
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source paramter map file '+
+                        print('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     print('========================================================================')
@@ -4561,6 +4538,8 @@ class BrainRegister(object):
                     print('')
                     
                     img_src = self.transform_image(img_ds, self.tar_src_pm)
+                    img_ds = None
+                    garbage = gc.collect() # clear memory
                     # not saving to self.target_image_img_source[index] to minimise memory occupation
                     return self.move_image_ds_img(img_src)
                 
@@ -4736,7 +4715,7 @@ class BrainRegister(object):
                             self.get_relative_path(self.target_template_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source paramter map file '+
+                        print('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     print('========================================================================')
@@ -4782,7 +4761,7 @@ class BrainRegister(object):
                             self.get_relative_path(self.source_template_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target paramter map file '+
+                        print('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     print('========================================================================')
@@ -4844,7 +4823,7 @@ class BrainRegister(object):
                                     self.get_relative_path(self.target_anno_path[i]) )
                             
                             for j, pm in enumerate(self.tar_src_pm_paths):
-                                print('    target-to-source paramter map file '+
+                                print('    target-to-source parameter map file '+
                                         str(j) + ' : ' + 
                                         self.get_relative_path(pm) )
                             print('========================================================================')
@@ -4926,7 +4905,7 @@ class BrainRegister(object):
                                     self.get_relative_path(self.source_anno_path[i]) )
                             
                             for j, pm in enumerate(self.src_tar_pm_paths):
-                                print('    source-to-target paramter map file '+
+                                print('    source-to-target parameter map file '+
                                         str(j) + ' : ' + 
                                         self.get_relative_path(pm) )
                             print('========================================================================')
@@ -5013,7 +4992,7 @@ class BrainRegister(object):
                                     self.get_relative_path(self.target_image_paths[i]) )
                             
                             for j, pm in enumerate(self.tar_src_pm_paths):
-                                print('    target-to-source paramter map file '+
+                                print('    target-to-source parameter map file '+
                                         str(j) + ' : ' + 
                                         self.get_relative_path(pm) )
                             print('========================================================================')
@@ -5072,7 +5051,7 @@ class BrainRegister(object):
                                     self.get_relative_path(self.source_image_paths[i]) )
                             
                             for j, pm in enumerate(self.src_tar_pm_paths):
-                                print('    source-to-target paramter map file '+
+                                print('    source-to-target parameter map file '+
                                         str(j) + ' : ' + 
                                         self.get_relative_path(pm) )
                             print('========================================================================')
