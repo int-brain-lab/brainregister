@@ -4294,7 +4294,7 @@ class BrainRegister(object):
     def save_tar_template_src(self):
         
         if self.target_template_path_source.exists() == False:
-            if self.source_template_img_target != None:
+            if self.target_template_img_source != None:
                 print('  saving target template to source : ' + 
                       self.get_relative_path(self.target_template_path_source))
                 self.save_image(self.target_template_img_source, self.target_template_path_source)
