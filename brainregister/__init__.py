@@ -1279,6 +1279,9 @@ class BrainRegister(object):
             print('')
             print('')
             img_t = self.transform_image(img_filt, self.src_tar_ds_pm)
+            img_filt = None
+            img = None
+            garbage = gc.collect()
             return img_t
             
             
@@ -1311,6 +1314,9 @@ class BrainRegister(object):
             print('')
             print('')
             img_t = self.transform_image(img_filt, self.tar_src_ds_pm)
+            img_filt = None
+            img = None
+            garbage = gc.collect()
             return img_t
             
             
@@ -1374,6 +1380,8 @@ class BrainRegister(object):
             print('')
             print('')
             anno_t = self.transform_image(img, self.src_tar_ds_pm_anno)
+            img = None
+            garbage = gc.collect()
             return anno_t
             
             
@@ -1456,6 +1464,8 @@ class BrainRegister(object):
             print('')
             print('')
             img_t = self.transform_image(img, self.tar_src_ds_pm)
+            img = None
+            garbage = gc.collect()
             return img_t
             
             
@@ -1479,6 +1489,8 @@ class BrainRegister(object):
             print('')
             print('')
             img_t = self.transform_image(img, self.src_tar_ds_pm)
+            img = None
+            garbage = gc.collect()
             return img_t
             
         
@@ -1530,6 +1542,8 @@ class BrainRegister(object):
             print('')
             print('')
             anno_t = self.transform_image(img, self.tar_src_ds_pm_anno)
+            img = None
+            garbage = gc.collect()
             return anno_t
             
             
@@ -1554,6 +1568,8 @@ class BrainRegister(object):
             print('')
             print('')
             anno_t = self.transform_image(img, self.src_tar_ds_pm)
+            img = None
+            garbage = gc.collect()
             return anno_t
             
         
@@ -1606,10 +1622,11 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.source_template_img_ds = self.transform_image(
-                                                    self.source_template_img, 
-                                                    self.src_tar_ds_pm)
-                    return self.source_template_img_ds
+                    img = self.transform_image(self.source_template_img, 
+                                         self.src_tar_ds_pm)
+                    self.source_template_img = None
+                    garbage = gc.collect()
+                    return img
                     
                 else:
                     print('  downsampled source template image exists : returning image' )
@@ -1617,8 +1634,8 @@ class BrainRegister(object):
             
             else:
                 print('  downsampled source template image exists - loading image..')
-                self.source_template_img_ds = self.load_image(self.source_template_path_ds)
-                return self.source_template_img_ds
+                return self.load_image(self.source_template_path_ds)
+                #return self.source_template_img_ds
             
             
         if (self.downsampling_img == 'target'):
@@ -1661,10 +1678,11 @@ class BrainRegister(object):
                     print('========================================================================')
                     print('')
                     print('')
-                    self.target_template_img_ds = self.transform_image(
-                                                    self.target_template_img, 
-                                                    self.tar_src_ds_pm)
-                    return self.target_template_img_ds
+                    img = self.transform_image(self.target_template_img,
+                                         self.tar_src_ds_pm)
+                    self.target_template_img = None
+                    garbage = gc.collect()
+                    return img
                     
                 else:
                     print('  downsampled target template image exists : returning image' )
@@ -1672,8 +1690,8 @@ class BrainRegister(object):
             
             else:
                 print('  downsampled target template image exists - loading image..')
-                self.target_template_img_ds = self.load_image(self.target_template_path_ds)
-                return self.target_template_img_ds
+                return self.load_image(self.target_template_path_ds)
+                #return self.target_template_img_ds
             
         
     
@@ -1985,6 +2003,7 @@ class BrainRegister(object):
             for i in range(1,len(pm_list)):
                 transformixImageFilter.AddTransformParameterMap(pm_list[i])
         
+        # TODO may need to break image up for transforming very large images
         transformixImageFilter.SetMovingImage(template_img)
         
         transformixImageFilter.Execute() 
@@ -3689,10 +3708,7 @@ class BrainRegister(object):
                     self.source_template_img = None
                     garbage = gc.collect() # discard from memory
                     # and move source to ds target from ds target to raw target
-                    img_ds = self.move_image_ds_img(img)
-                    img = None
-                    garbage = gc.collect() # discard from memory
-                    return img_ds
+                    return self.move_image_ds_img(img) # input img discarded in method!
                     
                 else:
                     print('  source template to target space exists - returning image..')
@@ -3811,6 +3827,8 @@ class BrainRegister(object):
                     print('')
                     
                     img_ds_tar = self.transform_image(img_ds, self.src_tar_pm_anno)
+                    img_ds = None
+                    garbage = gc.collect()
                     # not saving to self.source_anno_img_target[index] to minimise memory occupation
                     return img_ds_tar
                 
@@ -3856,6 +3874,8 @@ class BrainRegister(object):
                     print('')
                     
                     anno_ds_tar = self.transform_image(img_ds, self.src_tar_pm_anno)
+                    img_ds = None
+                    garbage = gc.collect()
                     # not saving to self.source_anno_img_target[index] to minimise memory occupation
                     return self.move_anno_ds_img(anno_ds_tar)
                 
@@ -3900,8 +3920,11 @@ class BrainRegister(object):
                     print('')
                     print('')
                     
-                    return self.transform_image(img_ds, self.src_tar_pm_anno)
+                    img = self.transform_image(img_ds, self.src_tar_pm_anno)
+                    img_ds = None
+                    garbage = gc.collect()
                     # not saving to self.source_anno_img_target[index] to minimise memory occupation
+                    return img
                     
                 else:
                     print('  source annotation to target space exists - returning image..')
@@ -3980,6 +4003,8 @@ class BrainRegister(object):
                     print('')
                     
                     img_tar = self.transform_image(img_ds, self.src_tar_pm)
+                    img_ds = None
+                    garbage = gc.collect()
                     # not saving to self.source_image_img_target[index] to minimise memory occupation
                     return img_tar
                 
@@ -4024,8 +4049,10 @@ class BrainRegister(object):
                     print('')
                     
                     img_tar = self.transform_image(img_ds, self.src_tar_pm)
+                    img_ds = None
+                    garbage = gc.collect()
                     # not saving to self.source_image_img_target[index] to minimise memory occupation
-                    return self.move_image_ds_img(img_tar)
+                    return self.move_image_ds_img(img_tar) # input img discarded in method!
                 
                 else:
                     print('  downsampled source image to target space exists - returning image..')
@@ -4067,8 +4094,11 @@ class BrainRegister(object):
                     print('')
                     print('')
                     
-                    return self.transform_image(img_ds, self.src_tar_pm)
+                    img = self.transform_image(img_ds, self.src_tar_pm)
+                    img_ds = None
+                    garbage = gc.collect()
                     # not saving to self.source_image_img_target[index] to minimise memory occupation
+                    return img
                     
                 else:
                     print('  downsampled source image to target space exists - returning image..')
@@ -4202,10 +4232,7 @@ class BrainRegister(object):
                     self.target_template_img = None
                     garbage = gc.collect() # discard from memory
                     # and move source to ds target from ds target to raw target
-                    img_ds = self.move_image_ds_img(img)
-                    img = None
-                    garbage = gc.collect() # discard from memory
-                    return img_ds
+                    return self.move_image_ds_img(img) # input img discarded in method!
                     
                 else:
                     print('  target template to source space exists - returning image..')
