@@ -1464,6 +1464,7 @@ class BrainRegister(object):
             print('')
             print('')
             img_t = self.transform_image(img, self.tar_src_ds_pm)
+            print('  move_image_ds_img : garbage collect input image')
             img = None
             garbage = gc.collect()
             return img_t
@@ -2034,11 +2035,14 @@ class BrainRegister(object):
     
     
     def cast_image(self, img, img_t):
-
+        
+        print('  cast image to original bitdepth')
+        print('')
         # get the minimum and maximum values in img
         minMax = sitk.MinimumMaximumImageFilter()
         minMax.Execute(img)
         
+        print('    clamp min/max..')
         # to be MEMORY EFFICIENT will use the ClampImageFilter
         clamp = sitk.ClampImageFilter()
         clamp.SetLowerBound(minMax.GetMinimum())
@@ -2052,11 +2056,13 @@ class BrainRegister(object):
         # this may result in aberrant pixel values if there is any overshoot pixels
         # eg. if pixels are set to BELOW 0.0 they will come up as HIGH PIXEL VALS when
         # cast to an unsigned pixel type..
+        print('    cast to original bitdepth..')
         img_t = sitk.Cast(img_t, img.GetPixelID())
+        print('    set spacing..')
         img_t.SetSpacing( tuple([1.0, 1.0, 1.0]) ) # can do this to be sure spacing is set!
         
         
-        return img
+        return img_t
         
 
     
@@ -2531,7 +2537,7 @@ class BrainRegister(object):
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                     
                 elif self.src_tar_prefiltered == True:
-                    # FREE MEMORY
+                    # FREE MEMORY of unfiltered images FIRST
                     self.target_template_img = None
                     self.source_template_img_ds = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
@@ -3638,9 +3644,10 @@ class BrainRegister(object):
                 if self.source_template_img_target == None: 
                     # and if the output image is not already loaded!
                     
+                    # get the source img DS for transforming
                     self.source_template_img_ds = self.get_template_ds()
                     
-                    
+                    # sr-to-tar defines ds-soruce to target transform
                     if self.src_tar_pm is None:
                         print('  source to target paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
