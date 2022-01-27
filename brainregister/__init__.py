@@ -3407,7 +3407,12 @@ class BrainRegister(object):
             img = filter_pipeline.execute_pipeline()
             filter_pipeline.dereference_image() # remove ref to raw data
             
-            return filter_pipeline.get_filtered_image()
+            img = filter_pipeline.get_filtered_image()
+            
+            filter_pipeline = None
+            garbage = gc.collect() # prevent memory leak!
+            
+            return img
         
         else:
             return img
