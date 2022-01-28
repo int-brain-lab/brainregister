@@ -12,7 +12,7 @@
 (MovingInternalImagePixelType "short")
 (NumberOfParameters 12.000000)
 (Origin 0.000000 0.000000 0.000000)
-(ResampleInterpolator "FinalLinearInterpolator")
+(ResampleInterpolator "FinalBSplineInterpolator")
 (Resampler "DefaultResampler")
 (ResultImageFormat "tiff")
 (ResultImagePixelType "short")
