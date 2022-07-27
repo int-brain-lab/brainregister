@@ -937,7 +937,7 @@ class BrainRegister(object):
         elif t2s_ratio < s2t_ratio:
             self.downsampling_img = 'target'
         else: # source and target are same size!
-            self.downsampling_img = 'none' # so do NO DOWNSAMPLING!
+            self.downsampling_img = 'source' # so use either of them
         
         # initialise bools for prefiltering
         # use to determine whether the src->tar or tar->src prefiltering has been applied
