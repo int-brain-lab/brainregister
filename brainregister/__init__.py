@@ -3088,18 +3088,18 @@ class BrainRegister(object):
                                                 self.src_tar_filter_pipeline )
                     
                 
-                if self.target_template_img_ds_filt != None:
+                if self.target_template_img_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    ds target template') # just log as if filtering took place
+                        print('    target template') # just log as if filtering took place
                     else: # filter correctly
-                        print('    ds target template')
-                        self.target_template_img_ds_filt = self.apply_adaptive_filter(
-                                                    self.target_template_img_ds, 
+                        print('    target template')
+                        self.target_template_img_filt = self.apply_adaptive_filter(
+                                                    self.target_template_img,
                                                     self.src_tar_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    ds target template')
-                    self.target_template_img_ds_filt = self.apply_adaptive_filter(
-                                                self.target_template_img_ds, 
+                    print('    target template')
+                    self.target_template_img_filt = self.apply_adaptive_filter(
+                                                self.target_template_img,
                                                 self.src_tar_filter_pipeline )
                 
                 # set bools to indicate filtering
