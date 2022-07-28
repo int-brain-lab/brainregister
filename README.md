@@ -138,3 +138,22 @@ Typical Usage
 
 Any issues or further questions can be addressed to Steven West (primary author).
 
+
+
+---
+
+
+
+# CHANGE LOG
+
+
+
+0.9.0 : 
+
+
+0.9.1 :
+
+* Corrected bugs with no downsampling registration and transformation.
+
+
+

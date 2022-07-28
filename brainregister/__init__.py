@@ -7,7 +7,7 @@ registration parameters and the Allen CCFv3 mouse brian atlas.
 """
 
 # package metadata
-__version__ = '0.9.0'
+__version__ = '0.9.1'
 __author__ = 'Steven J. West'
 
 # package imports
@@ -273,6 +273,7 @@ class BrainRegister(object):
     def __init__(self, yaml_path):
         
         self.set_brainregister_parameters_filepath(yaml_path)
+        self.set_brainregister_log_filepath(yaml_path)
         self.initialise_brainregister()
         self.create_output_dirs()
     
@@ -281,6 +282,11 @@ class BrainRegister(object):
     def set_brainregister_parameters_filepath(self, yaml_path):
         self.yaml_path = yaml_path
         
+    
+    
+    def set_brainregister_log_filepath(self, yaml_path):
+        self.log_path = Path( Path(self.yaml_path).absolute().parent, 'brainregister.log' )
+        open(self.log_path, 'w').close() # this creates new file and clears current contents
     
     
     def get_brainregister_parameters_Filepath(self):
@@ -312,17 +318,27 @@ class BrainRegister(object):
     
     
     
+    def print_and_log(self, line):
+        
+        # Open a file with access mode 'a'
+        with open(self.log_path, "a") as file_object:
+            # Append 'hello' at the end of file
+            file_object.write( '\n') # insert newline first
+            file_object.write( str(line))
+        print(line)
+    
+    
     
     def initialise_brainregister(self):
         
-        print('')
-        print('')
-        print('==========================')
-        print('INITIALISING BRAINREGISTER')
-        print('==========================')
-        print('')
+        self.print_and_log('')
+        self.print_and_log('')
+        self.print_and_log('==========================')
+        self.print_and_log('INITIALISING BRAINREGISTER')
+        self.print_and_log('==========================')
+        self.print_and_log('')
         
-        print('  loading brainregister parameters file..')
+        self.print_and_log('  loading brainregister parameters file..')
         self.load_params()
         
         
@@ -330,21 +346,21 @@ class BrainRegister(object):
         ##########################
         
         # paths to output DIRs
-        print('  resolving output DIR paths..')
+        self.print_and_log('  resolving output DIR paths..')
         self.resolve_dirs()
         
         # paths to source template and images
-        print('  resolving source template and image paths..')
+        self.print_and_log('  resolving source template and image paths..')
         self.resolve_source_params()
         
         # paths to ccf params and ccf template + annotation imagess
-        print('  resolving target template and image paths..')
+        self.print_and_log('  resolving target template and image paths..')
         self.resolve_target_params()
         
-        print('  resolving elastix & transformix parameter file paths..')
+        self.print_and_log('  resolving elastix & transformix parameter file paths..')
         self.resolve_params()
         
-        print('')
+        self.print_and_log('')
         
     
     
@@ -367,9 +383,9 @@ class BrainRegister(object):
         
         # first check that yaml_path is valid and read file
         if Path(self.yaml_path).exists() == False:
-            print('')
-            print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+            self.print_and_log('')
             sys.exit('  no brainregister_params file!')
         
         with open(self.yaml_path, 'r') as file:
@@ -380,11 +396,11 @@ class BrainRegister(object):
         if ( (self.brp['source-template-resolution']['x-um'] == 0.0) | 
             (self.brp['source-template-resolution']['y-um'] == 0.0) | 
             (self.brp['source-template-resolution']['z-um'] == 0.0) ) :
-            print('')
-            print('\033[1;31m ERROR : ' + 
+            self.print_and_log('')
+            self.print_and_log('\033[1;31m ERROR : ' + 
                   ' image resolution not set in brainregister_params : ' + 
                       str(self.yaml_path) + ' \033[0;0m')
-            print('')
+            self.print_and_log('')
             sys.exit( str('ERROR :  image resolution not set in brainregister_params : ' + 
                       str(self.yaml_path) ) )
         
@@ -540,11 +556,11 @@ class BrainRegister(object):
                             and not b.startswith('source-template-path')
                             and not b.startswith('source-annotations-path') ) ]
         
-        self.source_image_path = []
+        self.source_image_paths = []
         for s in source_path_keys:
             if self.brp[s]: # only add if not blank
             
-                self.source_image_path.append(
+                self.source_image_paths.append(
                     [Path( 
                 str(self.source_template_path.parent) 
                 + os.path.sep 
@@ -552,15 +568,15 @@ class BrainRegister(object):
                      )
                 
         
-        self.source_image_path_ds = []
-        self.source_image_path_target = []
-        if self.source_image_path: # only flatten list if not empty!
+        self.source_image_paths_ds = []
+        self.source_image_paths_target = []
+        if self.source_image_paths: # only flatten list if not empty!
             
-            self.source_image_path = [item for sublist in self.source_image_path for item in sublist]
+            self.source_image_paths = [item for sublist in self.source_image_paths for item in sublist]
             
-            for s in self.source_image_path:
+            for s in self.source_image_paths:
                 if self.src_tar_ds is True:
-                    self.source_image_path_ds.append( Path( 
+                    self.source_image_paths_ds.append( Path( 
                         str(self.src_tar_ds_dir) + 
                         os.path.sep  + 
                         self.brp['downsampling-prefix'] + 
@@ -569,7 +585,7 @@ class BrainRegister(object):
                         self.brp['downsampling-save-image-type'] ) )
                     
                 
-                self.source_image_path_target.append( Path(
+                self.source_image_paths_target.append( Path(
                     str(self.src_tar_dir) + 
                     os.path.sep  + 
                     self.brp['source-to-target-prefix'] + 
@@ -601,17 +617,17 @@ class BrainRegister(object):
             self.source_anno_img_target.append(None)
         
         
-        self.source_image_img = []
-        for i in self.source_image_path:
-            self.source_image_img.append(None)
+        self.source_image_imgs = []
+        for i in self.source_image_paths:
+            self.source_image_imgs.append(None)
         
-        self.source_image_img_ds = []
-        for i in self.source_image_path_ds:
-            self.source_image_img_ds.append(None)
+        self.source_image_imgs_ds = []
+        for i in self.source_image_paths_ds:
+            self.source_image_imgs_ds.append(None)
         
-        self.source_image_img_target = []
-        for i in self.source_image_path_target:
-            self.source_image_img_target.append(None)
+        self.source_image_imgs_target = []
+        for i in self.source_image_paths_target:
+            self.source_image_imgs_target.append(None)
         
     
     
@@ -637,9 +653,11 @@ class BrainRegister(object):
             with open(ccf_params, 'r') as file:
                 self.ccfp = yaml.safe_load(file)
         else: # use user-defined path
-            ccf_params = str( Path( os.path.join(
+            ccf_params = str( Path( self.brp_dir, os.path.join(
                             self.brp['target-template-path'])
                         ).resolve() )
+            print('brp_dir : ' + str(self.brp_dir) )
+            print('target-template-path : ' + str(self.brp['target-template-path']))
             with open( ccf_params, 'r') as file:
                 self.ccfp = yaml.safe_load( file )
         
@@ -960,35 +978,35 @@ class BrainRegister(object):
 
         '''
         
-        print('  create output dirs..')
+        self.print_and_log('  create output dirs..')
         
                 
         if self.src_tar_ds is True:
-            print('    making source-to-target downsampling dir : '+ 
+            self.print_and_log('    making source-to-target downsampling dir : '+ 
                       self.get_relative_path(self.src_tar_ds_dir) )
             if self.src_tar_ds_dir.exists() == False:
                 self.src_tar_ds_dir.mkdir(parents = True, exist_ok=True)
             
         
         if self.tar_src_ds is True:
-            print('    making source-to-target downsampling dir : '+ 
+            self.print_and_log('    making source-to-target downsampling dir : '+ 
                       self.get_relative_path(self.tar_src_ds_dir) )
             if self.tar_src_ds_dir.exists() == False:
                 self.tar_src_ds_dir.mkdir(parents = True, exist_ok=True)
             
         
         
-        print('    making source-to-target dir  : '+ 
+        self.print_and_log('    making source-to-target dir  : '+ 
               self.get_relative_path(self.src_tar_dir) )
         if self.src_tar_dir.exists() == False:
             self.src_tar_dir.mkdir(parents = True, exist_ok=True)
         
-        print('    making target-to-source dir : '+ 
+        self.print_and_log('    making target-to-source dir : '+ 
               self.get_relative_path(self.tar_src_dir) )
         if self.tar_src_dir.exists() == False:
             self.tar_src_dir.mkdir(parents = True, exist_ok=True)
         
-        print('')
+        self.print_and_log('')
         
     
     
@@ -1001,7 +1019,7 @@ class BrainRegister(object):
             + os.path.sep
             + self.brp['target-template-output'])
         
-        print('  building output target parameters file..')
+        self.print_and_log('  building output target parameters file..')
         
         # next - build the yaml file
         tar_params_path = os.path.join(
@@ -1053,7 +1071,7 @@ class BrainRegister(object):
         tp['target-template-orientation'] = self.brp['source-template-orientation']
         
         # write param list to brainregister output DIR
-        print('    saving target parameters file..')
+        self.print_and_log('    saving target parameters file..')
         with open(target_params_output_path, 'w') as file:
             yaml.dump(tp, file, sort_keys=False)
         
@@ -1079,7 +1097,7 @@ class BrainRegister(object):
             for t in tpf3:
                 file.write('%s' % t)
         
-        print('      written target_parameters.yaml file : ' +
+        self.print_and_log('      written target_parameters.yaml file : ' +
                os.path.relpath(target_params_output_path, os.getcwd()  ) )
         
     
@@ -1136,14 +1154,14 @@ class BrainRegister(object):
         
         if (self.downsampling_img == 'source'):
             # ds source
-            print('')
-            print('source template higher resolution than target - downsampling source..')
-            print('')
-            print('')
-            print('=====================')
-            print('SOURCE TO DOWNSAMPLED')
-            print('=====================')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('source template higher resolution than target - downsampling source..')
+            self.print_and_log('')
+            self.print_and_log('')
+            self.print_and_log('=====================')
+            self.print_and_log('SOURCE TO DOWNSAMPLED')
+            self.print_and_log('=====================')
+            self.print_and_log('')
             
             # generate scaling param files as needed
             self.generate_ds_scaling_param_files()
@@ -1160,14 +1178,14 @@ class BrainRegister(object):
             
         elif (self.downsampling_img == 'target'):
             
-            print('')
-            print('target template higher resolution than source - downsampling target..')
-            print('')
-            print('')
-            print('=====================')
-            print('TARGET TO DOWNSAMPLED')
-            print('=====================')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('target template higher resolution than source - downsampling target..')
+            self.print_and_log('')
+            self.print_and_log('')
+            self.print_and_log('=====================')
+            self.print_and_log('TARGET TO DOWNSAMPLED')
+            self.print_and_log('=====================')
+            self.print_and_log('')
             
             # generate scaling param files as needed
             self.generate_ds_scaling_param_files()
@@ -1183,7 +1201,7 @@ class BrainRegister(object):
             
         else:
             # no downsampling!
-            print('source and target template same resolution - no downsampling performed.')
+            self.print_and_log('source and target template same resolution - no downsampling performed.')
         
     
     
@@ -1204,23 +1222,23 @@ class BrainRegister(object):
             # save the source -> target downsampling template - if requested in params file!
             if self.brp['source-to-target-downsampling-save-template'] == True:
                 if self.source_template_img_ds != None:
-                    print('  saving source downsampled template image : ' +
+                    self.print_and_log('  saving source downsampled template image : ' +
                       self.get_relative_path(self.source_template_path_ds ) )
                     self.save_image(self.source_template_img_ds, 
                                     self.source_template_path_ds)
                 else:
-                    print('  source template image in ds space does not exist - run get_template_ds()')
+                    self.print_and_log('  source template image in ds space does not exist - run get_template_ds()')
                 
             
         elif (self.downsampling_img == 'target'):
             # save the target -> source downsampling template - if requested in params file!
             if self.brp['target-to-source-downsampling-save-template'] == True:
-                if self.template_ds_img != None:
-                    print('  saving target downsampled template image : ' +
+                if self.target_template_img_ds != None:
+                    self.print_and_log('  saving target downsampled template image : ' +
                       self.get_relative_path(self.target_template_path_ds ) )
                     self.save_image(self.target_template_img_ds, self.target_template_path_ds)
                 else:
-                    print('  target template image in ds space does not exist - run get_template_ds()')
+                    self.print_and_log('  target template image in ds space does not exist - run get_template_ds()')
                 
             
         
@@ -1255,7 +1273,7 @@ class BrainRegister(object):
             
             # apply img to ds filter first
             if self.brp['downsampling-filter'] != 'false':
-                print('    running downsampling filter..')
+                self.print_and_log('    running downsampling filter..')
                 self.img_ds_filter_pipeline = self.compute_adaptive_filter_img_ds()
                 img_filt = self.apply_adaptive_filter(
                                     img, self.img_ds_filter_pipeline)
@@ -1264,20 +1282,20 @@ class BrainRegister(object):
             
             # to move FROM SOURCE TO DS, need the src -> tar ds pm files
             if self.src_tar_ds_pm == None:
-                print('  loading source-to-downsampled transform parameters file : ' +
+                self.print_and_log('  loading source-to-downsampled transform parameters file : ' +
                       self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
                 self.src_tar_ds_pm = self.load_pm_files(self.src_tar_ds_pm_path)
                 if self.src_tar_ds_pm == None:
                     print("ERROR : src_tar_ds_pm files do not exist - run register() first")
             
             # transform all input images with transformix
-            print('  transforming image..')
-            print('    source-to-downsampled elastix pm file : ' + 
+            self.print_and_log('  transforming image..')
+            self.print_and_log('    source-to-downsampled elastix pm file : ' + 
                     self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
-            print('')
-            print('========================================================================')
-            print('')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('========================================================================')
+            self.print_and_log('')
+            self.print_and_log('')
             img_t = self.transform_image(img_filt, self.src_tar_ds_pm)
             img_filt = None
             img = None
@@ -1290,7 +1308,7 @@ class BrainRegister(object):
             
             # apply img to ds filter first
             if self.brp['downsampling-filter'] != 'false':
-                print('    running downsampling filter..')
+                self.print_and_log('    running downsampling filter..')
                 self.img_ds_filter_pipeline = self.compute_adaptive_filter_img_ds()
                 img_filt = self.apply_adaptive_filter(
                                     img, self.img_ds_filter_pipeline)
@@ -1299,20 +1317,20 @@ class BrainRegister(object):
             
             # to move FROM TARGET TO DS, need the tar -> src ds pm files
             if self.tar_src_ds_pm == None:
-                print('  loading target-to-downsampled transform parameters file : ' +
+                self.print_and_log('  loading target-to-downsampled transform parameters file : ' +
                       self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
                 self.tar_src_ds_pm = self.load_pm_files(self.tar_src_ds_pm_path)
                 if self.tar_src_ds_pm == None:
                     print("ERROR : tar_src_ds_pm files do not exist - run register() first")
             
             # transform all input images with transformix
-            print('  transforming image..')
-            print('    target-to-downsampled elastix pm file : ' + 
+            self.print_and_log('  transforming image..')
+            self.print_and_log('    target-to-downsampled elastix pm file : ' + 
                     self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
-            print('')
-            print('========================================================================')
-            print('')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('========================================================================')
+            self.print_and_log('')
+            self.print_and_log('')
             img_t = self.transform_image(img_filt, self.tar_src_ds_pm)
             img_filt = None
             img = None
@@ -1355,7 +1373,7 @@ class BrainRegister(object):
             
             # apply img to ds filter first
             #if self.brp['downsampling-filter'] != 'false':
-            #    print('    running downsampling filter..')
+            #    self.print_and_log('    running downsampling filter..')
             #    self.img_ds_filter_pipeline = self.compute_adaptive_filter_img_ds()
             #    img_filt = self.apply_adaptive_filter(
             #                        img, self.img_ds_filter_pipeline)
@@ -1364,7 +1382,7 @@ class BrainRegister(object):
             
             # to move FROM SOURCE TO DS, need the src -> tar ds pm files
             if self.src_tar_ds_pm_anno == None:
-                print('  loading source-to-downsampled transform parameters file : ' +
+                self.print_and_log('  loading source-to-downsampled transform parameters file : ' +
                       self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
                 self.src_tar_ds_pm = self.load_pm_files(self.src_tar_ds_pm_path)
                 if self.src_tar_ds_pm == None:
@@ -1372,13 +1390,13 @@ class BrainRegister(object):
                 self.src_tar_ds_pm_anno = self.edit_pms_nearest_neighbour(self.src_tar_ds_pm)
             
             # transform all input images with transformix
-            print('  transforming annotation image..')
-            print('    source-to-downsampled elastix pm file : ' + 
+            self.print_and_log('  transforming annotation image..')
+            self.print_and_log('    source-to-downsampled elastix pm file : ' + 
                     self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
-            print('')
-            print('========================================================================')
-            print('')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('========================================================================')
+            self.print_and_log('')
+            self.print_and_log('')
             anno_t = self.transform_image(img, self.src_tar_ds_pm_anno)
             img = None
             garbage = gc.collect()
@@ -1390,7 +1408,7 @@ class BrainRegister(object):
             
             # apply img to ds filter first
             #if self.brp['downsampling-filter'] != 'false':
-            #    print('    running downsampling filter..')
+            #    self.print_and_log('    running downsampling filter..')
             #    self.img_ds_filter_pipeline = self.compute_adaptive_filter_img_ds()
             #    img_filt = self.apply_adaptive_filter(
             #                        img, self.img_ds_filter_pipeline)
@@ -1399,7 +1417,7 @@ class BrainRegister(object):
             
             # to move FROM TARGET TO DS, need the tar -> src ds pm files
             if self.tar_src_ds_pm_anno == None:
-                print('  loading target-to-downsampled transform parameters file : ' +
+                self.print_and_log('  loading target-to-downsampled transform parameters file : ' +
                       self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
                 self.tar_src_ds_pm = self.load_pm_files(self.tar_src_ds_pm_path)
                 if self.tar_src_ds_pm == None:
@@ -1407,13 +1425,13 @@ class BrainRegister(object):
                 self.tar_src_ds_pm_anno = self.edit_pms_nearest_neighbour(self.tar_src_ds_pm)
             
             # transform all input images with transformix
-            print('  transforming annotation image..')
-            print('    target-to-downsampled elastix pm file : ' + 
+            self.print_and_log('  transforming annotation image..')
+            self.print_and_log('    target-to-downsampled elastix pm file : ' + 
                     self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
-            print('')
-            print('========================================================================')
-            print('')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('========================================================================')
+            self.print_and_log('')
+            self.print_and_log('')
             anno_t = self.transform_image(img, self.tar_src_ds_pm_anno)
             return anno_t
             
@@ -1449,22 +1467,22 @@ class BrainRegister(object):
             
             # to move FROM DS TO SOURCE, need the tar -> src ds pm files
             if self.tar_src_ds_pm == None:
-                print('  loading downsampled-to-source transform parameters file : ' +
+                self.print_and_log('  loading downsampled-to-source transform parameters file : ' +
                       self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
                 self.tar_src_ds_pm = self.load_pm_files(self.tar_src_ds_pm_path)
                 if self.tar_src_ds_pm == None:
                     print("ERROR : tar_src_ds_pm files do not exist - run register() first")
             
             # transform all input images with transformix
-            print('  transforming image..')
-            print('    downsampled-to-source elastix pm file : ' + 
+            self.print_and_log('  transforming image..')
+            self.print_and_log('    downsampled-to-source elastix pm file : ' + 
                     self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
-            print('')
-            print('========================================================================')
-            print('')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('========================================================================')
+            self.print_and_log('')
+            self.print_and_log('')
             img_t = self.transform_image(img, self.tar_src_ds_pm)
-            print('  move_image_ds_img : garbage collect input image')
+            self.print_and_log('  move_image_ds_img : garbage collect input image')
             img = None
             garbage = gc.collect()
             return img_t
@@ -1475,20 +1493,20 @@ class BrainRegister(object):
             
             # to move FROM DS TO TARGET, need the src -> tar ds pm files
             if self.src_tar_ds_pm == None:
-                print('  loading downsampled-to-target transform parameters file : ' +
+                self.print_and_log('  loading downsampled-to-target transform parameters file : ' +
                       self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
                 self.src_tar_ds_pm = self.load_pm_files(self.src_tar_ds_pm_path)
                 if self.src_tar_ds_pm == None:
                     print("ERROR : src_tar_ds_pm files do not exist - run register() first")
             
             # transform all input images with transformix
-            print('  transforming image..')
-            print('    downsampled-to-target elastix pm file : ' + 
+            self.print_and_log('  transforming image..')
+            self.print_and_log('    downsampled-to-target elastix pm file : ' + 
                     self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
-            print('')
-            print('========================================================================')
-            print('')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('========================================================================')
+            self.print_and_log('')
+            self.print_and_log('')
             img_t = self.transform_image(img, self.src_tar_ds_pm)
             img = None
             garbage = gc.collect()
@@ -1527,7 +1545,7 @@ class BrainRegister(object):
             
             # to move FROM DS TO SOURCE, need the tar -> src ds pm files
             if self.tar_src_ds_pm_anno == None:
-                print('  loading target-to-downsampled transform parameters file : ' +
+                self.print_and_log('  loading target-to-downsampled transform parameters file : ' +
                       self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
                 self.tar_src_ds_pm = self.load_pm_files(self.tar_src_ds_pm_path)
                 if self.tar_src_ds_pm == None:
@@ -1535,13 +1553,13 @@ class BrainRegister(object):
                 self.tar_src_ds_pm_anno = self.edit_pms_nearest_neighbour(self.tar_src_ds_pm)
             
             # transform all input images with transformix
-            print('  transforming image..')
-            print('    downsampled-to-source elastix pm file : ' + 
+            self.print_and_log('  transforming image..')
+            self.print_and_log('    downsampled-to-source elastix pm file : ' + 
                     self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
-            print('')
-            print('========================================================================')
-            print('')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('========================================================================')
+            self.print_and_log('')
+            self.print_and_log('')
             anno_t = self.transform_image(img, self.tar_src_ds_pm_anno)
             img = None
             garbage = gc.collect()
@@ -1553,7 +1571,7 @@ class BrainRegister(object):
             
             # to move FROM DS TO TARGET, need the src -> tar ds pm files
             if self.src_tar_ds_pm_anno == None:
-                print('  loading source-to-downsampled transform parameters file : ' +
+                self.print_and_log('  loading source-to-downsampled transform parameters file : ' +
                       self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
                 self.src_tar_ds_pm = self.load_pm_files(self.src_tar_ds_pm_path)
                 if self.src_tar_ds_pm == None:
@@ -1561,13 +1579,13 @@ class BrainRegister(object):
                 self.src_tar_ds_pm_anno = self.edit_pms_nearest_neighbour(self.src_tar_ds_pm)
             
             # transform all input images with transformix
-            print('  transforming image..')
-            print('    downsampled-to-target elastix pm file : ' + 
+            self.print_and_log('  transforming image..')
+            self.print_and_log('    downsampled-to-target elastix pm file : ' + 
                     self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
-            print('')
-            print('========================================================================')
-            print('')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('========================================================================')
+            self.print_and_log('')
+            self.print_and_log('')
             anno_t = self.transform_image(img, self.src_tar_ds_pm)
             img = None
             garbage = gc.collect()
@@ -1592,13 +1610,13 @@ class BrainRegister(object):
                     # TRANSFORM : will transform sample template to ds space
                     
                     if self.source_template_img == None:
-                        print('  loading source template image : ' + 
+                        self.print_and_log('  loading source template image : ' + 
                           self.get_relative_path(self.source_template_path) )
                         self.source_template_img = self.load_image(self.source_template_path)
                     
                     
                     if self.src_tar_ds_pm == None:
-                        print('  loading source-to-downsampled transform parameters file : ' +
+                        self.print_and_log('  loading source-to-downsampled transform parameters file : ' +
                               self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
                         self.src_tar_ds_pm = self.load_pm_files(self.src_tar_ds_pm_path)
                         if self.src_tar_ds_pm == None:
@@ -1607,22 +1625,22 @@ class BrainRegister(object):
                     
                     # apply downsampling filter - if requested in brp
                     if self.brp['downsampling-filter'] != 'false':
-                        print('  running source to downsampled filter..')
+                        self.print_and_log('  running source to downsampled filter..')
                         self.img_ds_filter_pipeline = self.compute_adaptive_filter_img_ds()
                         self.source_template_img = self.apply_adaptive_filter(
                                                     self.source_template_img, 
                                                     self.img_ds_filter_pipeline)
                     
                     # transform all input images with transformix
-                    print('  transforming source template image..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming source template image..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(self.source_template_path) )
-                    print('    source-to-downsampled elastix pm file : ' + 
+                    self.print_and_log('    source-to-downsampled elastix pm file : ' + 
                             self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     img = self.transform_image(self.source_template_img, 
                                          self.src_tar_ds_pm)
                     self.source_template_img = None
@@ -1630,11 +1648,11 @@ class BrainRegister(object):
                     return img
                     
                 else:
-                    print('  downsampled source template image exists : returning image' )
+                    self.print_and_log('  downsampled source template image exists : returning image' )
                     return self.source_template_img_ds
             
             else:
-                print('  downsampled source template image exists - loading image..')
+                self.print_and_log('  downsampled source template image exists - loading image..')
                 return self.load_image(self.source_template_path_ds)
                 #return self.source_template_img_ds
             
@@ -1648,13 +1666,13 @@ class BrainRegister(object):
                     # TRANSFORM : will transform sample template to ds space
                     
                     if self.target_template_img == None:
-                        print('  loading target template image : ' + 
+                        self.print_and_log('  loading target template image : ' + 
                           self.get_relative_path(self.target_template_path) )
                         self.target_template_img = self.load_image(self.target_template_path)
                     
                     
                     if self.tar_src_ds_pm == None:
-                        print('  loading target-to-downsampled transform parameters file : ' +
+                        self.print_and_log('  loading target-to-downsampled transform parameters file : ' +
                               self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
                         self.tar_src_ds_pm = self.load_pm_files(self.tar_src_ds_pm_path)
                         if self.tar_src_ds_pm == None:
@@ -1663,22 +1681,22 @@ class BrainRegister(object):
                     
                     # apply downsampling filter - if requested in brp
                     if self.brp['downsampling-filter'] != 'false':
-                        print('  running target to downsampled filter..')
+                        self.print_and_log('  running target to downsampled filter..')
                         self.img_ds_filter_pipeline = self.compute_adaptive_filter_img_ds()
                         self.target_template_img = self.apply_adaptive_filter(
                                                     self.target_template_img, 
                                                     self.img_ds_filter_pipeline)
                     
                     # transform all input images with transformix
-                    print('  transforming target template image..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming target template image..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(self.target_template_path) )
-                    print('    target-to-downsampled elastix pm file : ' + 
+                    self.print_and_log('    target-to-downsampled elastix pm file : ' + 
                             self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     img = self.transform_image(self.target_template_img,
                                          self.tar_src_ds_pm)
                     self.target_template_img = None
@@ -1686,11 +1704,11 @@ class BrainRegister(object):
                     return img
                     
                 else:
-                    print('  downsampled target template image exists : returning image' )
+                    self.print_and_log('  downsampled target template image exists : returning image' )
                     return self.target_template_img_ds
             
             else:
-                print('  downsampled target template image exists - loading image..')
+                self.print_and_log('  downsampled target template image exists - loading image..')
                 return self.load_image(self.target_template_path_ds)
                 #return self.target_template_img_ds
             
@@ -1706,36 +1724,36 @@ class BrainRegister(object):
             
             if self.src_tar_ds_pm_path_exists() == False:
                 
-                print('  defining source to downsampled scaling parameters..')
+                self.print_and_log('  defining source to downsampled scaling parameters..')
                 self.src_tar_ds_pm = self.get_img_ds_scaling()
                 
-                print('  saving source-to-downsampled transform parameters file : ')
-                print('    '+self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
+                self.print_and_log('  saving source-to-downsampled transform parameters file : ')
+                self.print_and_log('    '+self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
                 self.save_img_ds_pm_file()
                 
             else:
                 
-                print('  loading source-to-downsampled transform parameters file : ')
-                print('    '+self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
+                self.print_and_log('  loading source-to-downsampled transform parameters file : ')
+                self.print_and_log('    '+self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
                 self.src_tar_ds_pm = self.load_pm_files(self.src_tar_ds_pm_path)
             
             
             if self.tar_src_ds_pm_path_exists() == False:
                 
-                print('  defining downsampled to source scaling parameters..')
+                self.print_and_log('  defining downsampled to source scaling parameters..')
                 self.tar_src_ds_pm = self.get_ds_img_scaling()
                 
-                print('  saving downsampled-to-source transform parameters file : ')
-                print('    '+self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
+                self.print_and_log('  saving downsampled-to-source transform parameters file : ')
+                self.print_and_log('    '+self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
                 self.save_ds_img_pm_file()
                 
             else:
                 
-                print('  loading downsampled-to-source transform parameters file : ')
-                print('    '+self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
+                self.print_and_log('  loading downsampled-to-source transform parameters file : ')
+                self.print_and_log('    '+self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
                 self.tar_src_ds_pm = self.load_pm_files(self.tar_src_ds_pm_path)
             
-            print('')
+            self.print_and_log('')
             
             
             
@@ -1744,36 +1762,36 @@ class BrainRegister(object):
             
             if self.tar_src_ds_pm_path_exists() == False:
                 
-                print('  defining target to downsampled scaling parameters..')
+                self.print_and_log('  defining target to downsampled scaling parameters..')
                 self.tar_src_ds_pm = self.get_img_ds_scaling()
                 
-                print('  saving target-to-downsampled transform parameters file : ' +
+                self.print_and_log('  saving target-to-downsampled transform parameters file : ' +
                           self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
                 self.save_img_ds_pm_file()
                 
             else:
                 
-                print('  loading target-to-downsampled transform parameters file : ' +
+                self.print_and_log('  loading target-to-downsampled transform parameters file : ' +
                           self.get_relative_path(self.tar_src_ds_pm_path[0] ) )
                 self.tar_src_ds_pm = self.load_pm_files(self.tar_src_ds_pm_path)
             
             
             if self.src_tar_ds_pm_path_exists() == False:
                 
-                print('  defining downsampled to target scaling parameters..')
+                self.print_and_log('  defining downsampled to target scaling parameters..')
                 self.src_tar_ds_pm = self.get_ds_img_scaling()
                 
-                print('  saving downsampled-to-target transform parameters file : ' +
+                self.print_and_log('  saving downsampled-to-target transform parameters file : ' +
                           self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
                 self.save_ds_img_pm_file()
                 
             else:
                 
-                print('  loading downsampled-to-target transform parameters file : ' +
+                self.print_and_log('  loading downsampled-to-target transform parameters file : ' +
                           self.get_relative_path(self.src_tar_ds_pm_path[0] ) )
                 self.src_tar_ds_pm = self.load_pm_files(self.src_tar_ds_pm_path)
             
-            print('')
+            self.print_and_log('')
             
     
     
@@ -1870,7 +1888,7 @@ class BrainRegister(object):
             img_ds_pm['ResultImageFormat'] = tuple( [ self.brp['downsampling-save-image-type'] ] )
             
             img_ds_pm = [img_ds_pm]
-            # wrap in list so this works with transform_image like any other set pof parameter maps!
+            # wrap in list so this works with transform_image like any other set of parameter maps!
             
             return img_ds_pm
             
@@ -1912,7 +1930,7 @@ class BrainRegister(object):
             img_ds_pm['ResultImageFormat'] = tuple( [ self.brp['downsampling-save-image-type'] ] )
             
             img_ds_pm = [img_ds_pm]
-            # wrap in list so this works with transform_image like any other set pof parameter maps!
+            # wrap in list so this works with transform_image like any other set of parameter maps!
             
             return img_ds_pm
         else:
@@ -1952,7 +1970,48 @@ class BrainRegister(object):
             ds_img_pm['ResultImageFormat'] = tuple( [ self.brp['downsampling-save-image-type'] ] )
             
             ds_img_pm = [ds_img_pm]
-            # wrap in list so this works with transform_image like any other set pof parameter maps!
+            # wrap in list so this works with transform_image like any other set of parameter maps!
+            
+            return ds_img_pm
+        
+        
+        elif self.downsampling_img =='target':
+            # downsampling the target image : target -> downsampled (source res.)
+            ds_img_pm = sitk.ReadParameterFile(
+                        os.path.join(BRAINREGISTER_MODULE_DIR, 'resources',
+                                          'transformix-parameter-files', 
+                                          '00_scaling.txt') )
+            # see keys with list(ds_img_pm)
+            # see contents of keys with ds_img_pm['key']
+            
+            # edit TransformParameters to correct tuple
+             # use t2s - as the registration is FROM fixed TO moving!!!
+            ds_img_pm['TransformParameters'] = tuple( 
+                [str("{:.6f}".format(self.t2s['x-um'])), 
+                 '0.000000', '0.000000','0.000000', 
+                 str("{:.6f}".format(self.t2s['y-um'])), 
+                 '0.000000','0.000000','0.000000', 
+                 str("{:.6f}".format(self.t2s['z-um'])), 
+                 '0.000000','0.000000','0.000000'] )
+            
+            # AND edit the Size to correct tuple
+             # here want to use target template size ONLY
+            ds_img_pm['Size'] = tuple( 
+                [str("{:.6f}".format( round(
+                    self.ccfp[str(self.target_string+'-template-size')]['x'] ))),
+                      #* self.t2s['x-um']) ) ), 
+                 str("{:.6f}".format( round(
+                     self.ccfp[str(self.target_string+'-template-size')]['y'] ))),
+                       #* self.t2s['y-um']) ) ),
+                 str("{:.6f}".format( round(
+                     self.ccfp[str(self.target_string+'-template-size')]['z'] ))) ] )
+                       #* self.t2s['z-um']))) ] )
+            
+            # set the output format
+            ds_img_pm['ResultImageFormat'] = tuple( [ self.brp['downsampling-save-image-type'] ] )
+            
+            ds_img_pm = [ds_img_pm]
+            # wrap in list so this works with transform_image like any other set of parameter maps!
             
             return ds_img_pm
         
@@ -2020,10 +2079,10 @@ class BrainRegister(object):
         #img.SetSpacing( tuple([1.0, 1.0, 1.0]) )
         
         
-        print('')
-        print('========================================================================')
-        print('')
-        print('')
+        self.print_and_log('')
+        self.print_and_log('========================================================================')
+        self.print_and_log('')
+        self.print_and_log('')
         
         # cast to the original image bitdepth as needed
         # output is 32-bit float - convert this to the ORIGINAL image type!
@@ -2036,13 +2095,13 @@ class BrainRegister(object):
     
     def cast_image(self, img, img_t):
         
-        print('  cast image to original bitdepth')
-        print('')
+        self.print_and_log('  cast image to original bitdepth')
+        self.print_and_log('')
         # get the minimum and maximum values in img
         minMax = sitk.MinimumMaximumImageFilter()
         minMax.Execute(img)
         
-        print('    clamp min/max..')
+        self.print_and_log('    clamp min/max..')
         # to be MEMORY EFFICIENT will use the ClampImageFilter
         clamp = sitk.ClampImageFilter()
         clamp.SetLowerBound(minMax.GetMinimum())
@@ -2056,9 +2115,9 @@ class BrainRegister(object):
         # this may result in aberrant pixel values if there is any overshoot pixels
         # eg. if pixels are set to BELOW 0.0 they will come up as HIGH PIXEL VALS when
         # cast to an unsigned pixel type..
-        print('    cast to original bitdepth..')
+        self.print_and_log('    cast to original bitdepth..')
         img_t = sitk.Cast(img_t, img.GetPixelID())
-        print('    set spacing..')
+        self.print_and_log('    set spacing..')
         img_t.SetSpacing( tuple([1.0, 1.0, 1.0]) ) # can do this to be sure spacing is set!
         
         
@@ -2128,13 +2187,13 @@ class BrainRegister(object):
                     self.source_template_img = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                 else:
-                    print('')
-                    print('  source template in downsampled space exists..')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  source template in downsampled space exists..')
+                    self.print_and_log('')
             else:
-                print('')
-                print('  transforming and saving source template to ds : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving source template to ds : not requested')
+                self.print_and_log('')
             
             
         elif self.downsampling_img == 'target':
@@ -2147,13 +2206,13 @@ class BrainRegister(object):
                     self.target_template_img = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                 else:
-                    print('')
-                    print('  target template in downsampled space exists..')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  target template in downsampled space exists..')
+                    self.print_and_log('')
             else:
-                print('')
-                print('  transforming and saving target template to ds : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving target template to ds : not requested')
+                self.print_and_log('')
         
     
     
@@ -2165,47 +2224,47 @@ class BrainRegister(object):
             #source-to-target-downsampling-save-annotations
             if self.brp['source-to-target-downsampling-save-annotations'] == True:
                 
-                # now transform and save each sample annotation
+                # now transform and save each source annotation
                 if self.source_anno_path != []:
-                    print('')
-                    print('  transforming and saving source annotations to ds..')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source annotations to ds..')
                     
                     for i, s in enumerate(self.source_anno_path):
                         
                         self.process_anno_ds(i)
                     
                 else:
-                    print('')
-                    print('  transforming and saving source annotations to ds : no annotations to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source annotations to ds : no annotations to process')
+                    self.print_and_log('')
                 
                 
                 # ALSO copy the annotation structure tree files
                 if self.source_tree_path != []:
-                    print('')
-                    print('  transforming and saving source annotation structure trees to ds..')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source annotation structure trees to ds..')
                     
                     for i, st_path in enumerate(self.source_tree_path):
                         
                         if self.source_tree_path_ds[i].exists() == False:
-                            print('  copying source annotation structure tree to ds : '+
+                            self.print_and_log('  copying source annotation structure tree to ds : '+
                                   str( self.source_tree_path_ds[i].resolve() ) )
                             shutil.copy(st_path, self.source_tree_path_ds[i])
                         else:
-                            print('  source annotation structure tree to ds exists : '+
+                            self.print_and_log('  source annotation structure tree to ds exists : '+
                                   str( self.source_tree_path_ds[i].resolve() ) )
                         #self.process_anno_ds(i)
                     
                 else:
-                    print('')
-                    print('  transforming and saving source annotation structure tree to ds : no trees to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source annotation structure tree to ds : no trees to process')
+                    self.print_and_log('')
                 
                 
             else:
-                print('')
-                print('  transforming and saving source annotations to ds : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving source annotations to ds : not requested')
+                self.print_and_log('')
                 
             
             
@@ -2213,47 +2272,47 @@ class BrainRegister(object):
             #target-to-source-downsampling-save-annotations
             if self.brp['target-to-source-downsampling-save-annotations'] == True:
                 
-                # now transform and save each sample annotation
+                # now transform and save each target annotation
                 if self.target_anno_path != []:
-                    print('')
-                    print('  transforming and saving target annotations to ds..')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target annotations to ds..')
                     
                     for i, s in enumerate(self.target_anno_path):
                         
                         self.process_anno_ds(i)
                     
                 else:
-                    print('')
-                    print('  transforming and saving target annotations to ds : no annotations to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target annotations to ds : no annotations to process')
+                    self.print_and_log('')
                 
                 
                 # ALSO copy the annotation structure tree files
                 if self.target_tree_path != []:
-                    print('')
-                    print('  transforming and saving target annotation structure tree to ds..')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target annotation structure tree to ds..')
                     
                     for i, st_path in enumerate(self.target_tree_path):
                         
                         if self.target_tree_path_ds[i].exists() == False:
-                            print('  copying target annotation structure tree to ds : '+
+                            self.print_and_log('  copying target annotation structure tree to ds : '+
                                   str( self.target_tree_path_ds[i].resolve() ) )
                             shutil.copy(st_path, self.target_tree_path_ds[i])
                         else:
-                            print('  target annotation structure tree to ds exists : '+
+                            self.print_and_log('  target annotation structure tree to ds exists : '+
                                   str( self.target_tree_path_ds[i].resolve() ) )
                         #self.process_anno_ds(i)
                     
                 else:
-                    print('')
-                    print('  transforming and saving target annotation structure tree to ds : no trees to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target annotation structure tree to ds : no trees to process')
+                    self.print_and_log('')
                 
                 
             else:
-                print('')
-                print('  transforming and saving target annotations to ds : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving target annotations to ds : not requested')
+                self.print_and_log('')
                 
             
         
@@ -2267,24 +2326,24 @@ class BrainRegister(object):
         #source_anno images
             if (self.source_anno_path_ds != []):
                 
-                if self.source_anno_path_ds[index].exists() == False:
-                    print('')
-                    print('    loading source annotation image : ' 
+                if self.source_anno_path_ds[index].exists() == False: 
+                    self.print_and_log('')
+                    self.print_and_log('    loading source annotation image : ' 
                            + self.get_relative_path(
-                               self.source_anno_path_ds[index]) )
+                               self.source_anno_path[index]) ) #source_anno_path_ds BUG
                     
                     anno_ds = self.load_transform_anno_img_ds(
-                                    self.source_anno_path_ds[index] )
+                                    self.source_anno_path[index] ) #source_anno_path_ds BUG
                     
                     self.save_anno_ds(index, anno_ds)
                     
                 else:
-                    print('    downsampled source annotation image exists : ' 
+                    self.print_and_log('    downsampled source annotation image exists : ' 
                            + self.get_relative_path( self.source_anno_path_ds[index]) )
                     
                 
             else:
-                print('    no source annotation images to downsample..' )
+                self.print_and_log('    no source annotation images to downsample..' )
                 
                 
         elif (self.downsampling_img == 'target'):
@@ -2292,23 +2351,23 @@ class BrainRegister(object):
             if (self.target_anno_path_ds != []):
                 
                 if self.target_anno_path_ds[index].exists() == False:
-                    print('')
-                    print('    loading target annotation image : ' 
+                    self.print_and_log('')
+                    self.print_and_log('    loading target annotation image : ' 
                            + self.get_relative_path(
-                               self.target_anno_path_ds[index]) )
+                               self.target_anno_path[index]) ) # target_anno_path_ds BUG
                     
                     anno_ds = self.load_transform_anno_img_ds(
-                                    self.target_anno_path_ds[index] )
+                                    self.target_anno_path[index] ) # target_anno_path_ds BUG
                     
                     self.save_anno_ds(index, anno_ds)
                     
                 else:
-                    print('    downsampled target annotation image exists : ' 
+                    self.print_and_log('    downsampled target annotation image exists : ' 
                            + self.get_relative_path( self.target_anno_path_ds[index]) )
                     
                 
             else:
-                print('    no target annotation images to downsample..' )
+                self.print_and_log('    no target annotation images to downsample..' )
         
         
     
@@ -2322,22 +2381,22 @@ class BrainRegister(object):
             if self.brp['source-to-target-downsampling-save-images'] == True:
                 # now transform and save each sample image
                 
-                if self.source_image_path != []:
+                if self.source_image_paths != []:
                     
-                    print('')
-                    print('  transforming and saving source images to ds..')
-                    for i, s in enumerate(self.source_image_path):
-                        print('  source image ' + str(i))
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source images to ds..')
+                    for i, s in enumerate(self.source_image_paths):
+                        self.print_and_log('  source image ' + str(i))
                         self.process_image_ds(i)
                     
                 else:
-                    print('')
-                    print('  transforming and saving source images to ds : no images to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source images to ds : no images to process')
+                    self.print_and_log('')
             else:
-                print('')
-                print('  transforming and saving source images to ds : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving source images to ds : not requested')
+                self.print_and_log('')
                 
             
         elif (self.downsampling_img == 'target'):
@@ -2346,20 +2405,20 @@ class BrainRegister(object):
                 # now transform and save each sample image
                 
                 if self.target_image_paths != []:
-                    print('')
-                    print('  transforming and saving target images to ds..')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target images to ds..')
                     for i, s in enumerate(self.target_image_paths):
-                        print('  target image ' + str(i))
+                        self.print_and_log('  target image ' + str(i))
                         self.process_image_ds(i)
                     
                 else:
-                    print('')
-                    print('  transforming and saving target images to ds : no images to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target images to ds : no images to process')
+                    self.print_and_log('')
             else:
-                print('')
-                print('  transforming and saving target images to ds : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving target images to ds : not requested')
+                self.print_and_log('')
                 
         
     
@@ -2369,28 +2428,28 @@ class BrainRegister(object):
         
         if (self.downsampling_img == 'source'):
             # source_images
-            if (self.source_image_path_ds is not None):
+            if (self.source_image_paths_ds is not None):
                 
-                if self.source_image_path_ds[index].exists() == False:
+                if self.source_image_paths_ds[index].exists() == False:
                     
-                    print('')
-                    print('    loading source image : ' 
+                    self.print_and_log('')
+                    self.print_and_log('    loading source image : ' 
                            + self.get_relative_path(
-                               self.source_image_path[index]) )
+                               self.source_image_paths[index]) )
                     
                     sample_ds = self.load_transform_image_img_ds(
-                                 self.source_image_path[index] )
+                                 self.source_image_paths[index] )
                     
                     self.save_image_ds(index, sample_ds)
                     
                 else:
-                    print('    downsampled source image exists : ' 
+                    self.print_and_log('    downsampled source image exists : ' 
                            + self.get_relative_path( 
-                               self.source_image_path_ds[index]) )
+                               self.source_image_paths_ds[index]) )
                     
                 
             else:
-                print('    no source images to downsample..' )
+                self.print_and_log('    no source images to downsample..' )
                 
                 
                 
@@ -2400,8 +2459,8 @@ class BrainRegister(object):
                 
                 if self.target_image_paths_ds[index].exists() == False:
                     
-                    print('')
-                    print('    loading target image : ' 
+                    self.print_and_log('')
+                    self.print_and_log('    loading target image : ' 
                            + self.get_relative_path(
                                self.target_image_paths[index]) )
                     
@@ -2411,12 +2470,12 @@ class BrainRegister(object):
                     self.save_image_ds(index, sample_ds)
                     
                 else:
-                    print('    downsampled target image exists : ' 
+                    self.print_and_log('    downsampled target image exists : ' 
                            + self.get_relative_path( 
                                self.target_image_paths_ds[index]) )
                     
             else:
-                print('    no target images to downsample..' )
+                self.print_and_log('    no target images to downsample..' )
                 
             
         
@@ -2430,7 +2489,7 @@ class BrainRegister(object):
         if (self.downsampling_img == 'source'):
             # save to source anno image path
             if self.source_anno_path_ds[index].exists() == False:
-                print('    saving downsampled image : ' 
+                self.print_and_log('    saving downsampled image : ' 
                    + self.get_relative_path(self.source_anno_path_ds[index]) )
                 self.save_image(sample_ds, self.source_anno_path_ds[index])
                 
@@ -2438,7 +2497,7 @@ class BrainRegister(object):
         elif (self.downsampling_img == 'target'):
             # save to target anno image path
             if self.target_anno_path_ds[index].exists() == False:
-                print('    saving downsampled image : ' 
+                self.print_and_log('    saving downsampled image : ' 
                    + self.get_relative_path(self.target_anno_path_ds[index]) )
                 self.save_image(sample_ds, self.target_anno_path_ds[index])
                 
@@ -2451,19 +2510,19 @@ class BrainRegister(object):
         
         if (self.downsampling_img == 'source'):
             # source_images
-            if self.source_image_path_ds[index].exists() == False:
-                print('    saving source downsampled image : ' 
+            if self.source_image_paths_ds[index].exists() == False:
+                self.print_and_log('    saving source downsampled image : ' 
                    + self.get_relative_path(
-                       self.source_image_path_ds[index]) )
+                       self.source_image_paths_ds[index]) )
                 
                 self.save_image(sample_ds, 
-                                 self.source_image_path_ds[index] )
+                                 self.source_image_paths_ds[index] )
                 
             
         elif (self.downsampling_img == 'target'):
             # target_images
             if self.target_image_paths_ds[index].exists() == False:
-                print('    saving target downsampled image : ' 
+                self.print_and_log('    saving target downsampled image : ' 
                    + self.get_relative_path(
                        self.target_image_paths_ds[index]) )
                 
@@ -2476,12 +2535,12 @@ class BrainRegister(object):
     
     def register_source_to_target(self):
         
-        print('')
-        print('')
-        print('================')
-        print('SOURCE TO TARGET')
-        print('================')
-        print('')
+        self.print_and_log('')
+        self.print_and_log('')
+        self.print_and_log('================')
+        self.print_and_log('SOURCE TO TARGET')
+        self.print_and_log('================')
+        self.print_and_log('')
         
         
         if self.src_tar_pm_files_exist() is False:
@@ -2497,18 +2556,18 @@ class BrainRegister(object):
                     
                     if self.source_template_path_ds.exists() == True:
                         
-                        print('  loading ds source template image : ', 
+                        self.print_and_log('  loading ds source template image : '+ 
                                         self.source_template_path_ds.name)
                         self.source_template_img_ds = self.load_image(self.source_template_path_ds)
                     else:
-                        print('  ds source template image does not exist -'+
+                        self.print_and_log('  ds source template image does not exist -'+
                                 ' generating from source template')
                         self.source_template_img_ds = self.get_template_ds()
                 
                 
                 if self.target_template_img == None:
                     
-                    print('  loading target template image : '+ 
+                    self.print_and_log('  loading target template image : '+ 
                                       self.target_template_path.name)
                     self.target_template_img = self.load_image(self.target_template_path)
                 
@@ -2519,15 +2578,15 @@ class BrainRegister(object):
                 
                 if self.src_tar_prefiltered == False: # if src_tar_filter is set to 'none'
                     # REGISTRATION - use unfiltered images
-                    print('  registering source to target..')
-                    print('    source : ' + 
+                    self.print_and_log('  registering source to target..')
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path_ds) )
-                    print('    target : ' + 
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.source_template_img_ds, 
                                         self.target_template_img, 
                                         self.src_tar_ep )
@@ -2542,15 +2601,15 @@ class BrainRegister(object):
                     self.source_template_img_ds = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
-                    print('  registering source to target after prefilter..')
-                    print('    source : ' + 
+                    self.print_and_log('  registering source to target after prefilter..')
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path_ds) )
-                    print('    target : ' + 
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.source_template_img_ds_filt, 
                                         self.target_template_img_filt,
                                         self.src_tar_ep )
@@ -2559,7 +2618,7 @@ class BrainRegister(object):
                     self.target_template_img_filt = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
-                print('  saving source to target parameter map file[s]..')
+                self.print_and_log('  saving source to target parameter map file[s]..')
                 self.save_pm_files( self.src_tar_pm_paths )
                 
                 
@@ -2570,8 +2629,8 @@ class BrainRegister(object):
                  
                 if self.source_template_img == None:
                      
-                     print('  loading source template image : '+ 
-                                       self.source_template_path.name)
+                     self.print_and_log( str('  loading source template image : '+ 
+                                       self.source_template_path.name) )
                      self.source_template_img = sitk.ReadImage( 
                                                  str(self.source_template_path) )
                      self.source_template_img.SetSpacing( tuple([1.0, 1.0, 1.0]) )
@@ -2581,14 +2640,14 @@ class BrainRegister(object):
                     
                     if self.target_template_path_ds.exists() == True:
                         
-                        print('  loading ds target template image : ', 
-                                        self.target_template_path_ds.name)
+                        self.print_and_log( str('  loading ds target template image : '+ 
+                                        self.target_template_path_ds.name) )
                         self.target_template_img_ds = sitk.ReadImage( 
                                              str(self.target_template_path_ds) )
                         self.target_template_img_ds.SetSpacing( 
                                                         tuple([1.0, 1.0, 1.0]) )
                     else:
-                        print('  ds target template image does not exist -'+
+                        self.print_and_log('  ds target template image does not exist -'+
                                 ' generating from target template')
                         self.target_template_img_ds = self.get_template_ds()
                 
@@ -2599,15 +2658,15 @@ class BrainRegister(object):
                 
                 if self.src_tar_prefiltered == False: # if src_tar_filter is set to 'none'
                     # REGISTRATION - use unfiltered images
-                    print('  registering source to target..')
-                    print('    source : ' + 
+                    self.print_and_log('  registering source to target..')
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path) )
-                    print('    target : ' + 
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path_ds) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.source_template_img, 
                                         self.target_template_img_ds, 
                                         self.src_tar_ep )
@@ -2622,15 +2681,15 @@ class BrainRegister(object):
                     self.target_template_img_ds = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
-                    print('  registering source to target after prefilter..')
-                    print('    source : ' + 
+                    self.print_and_log('  registering source to target after prefilter..')
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path) )
-                    print('    target : ' + 
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path_ds) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.source_template_img_filt, 
                                         self.target_template_img_ds_filt,
                                         self.src_tar_ep )
@@ -2639,7 +2698,7 @@ class BrainRegister(object):
                     self.target_template_img_ds_filt = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
-                print('  saving source to target parameter map file[s]..')
+                self.print_and_log('  saving source to target parameter map file[s]..')
                 self.save_pm_files( self.src_tar_pm_paths )
                 
                 
@@ -2650,7 +2709,7 @@ class BrainRegister(object):
                 
                 if self.source_template_img == None:
                     
-                    print('  loading source template image : '+ 
+                    self.print_and_log('  loading source template image : '+ 
                                       self.source_template_path.name)
                     self.source_template_img = sitk.ReadImage( 
                                                 str(self.source_template_path) )
@@ -2659,7 +2718,7 @@ class BrainRegister(object):
                 
                 if self.target_template_img == None:
                     
-                    print('  loading target template image : '+ 
+                    self.print_and_log('  loading target template image : '+ 
                                       self.target_template_path.name)
                     self.target_template_img = sitk.ReadImage( 
                                                 str(self.target_template_path) )
@@ -2672,15 +2731,15 @@ class BrainRegister(object):
                 
                 if self.src_tar_prefiltered == False: # if src_tar_filter is set to 'none'
                     # REGISTRATION - use unfiltered images
-                    print('  registering source to target..')
-                    print('    source : ' + 
+                    self.print_and_log('  registering source to target..')
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path) )
-                    print('    target : ' + 
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.source_template_img, 
                                         self.target_template_img, 
                                         self.src_tar_ep )
@@ -2695,15 +2754,15 @@ class BrainRegister(object):
                     self.target_template_img = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
-                    print('  registering source to target after prefilter..')
-                    print('    source : ' + 
+                    self.print_and_log('  registering source to target after prefilter..')
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path) )
-                    print('    target : ' + 
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.source_template_img_filt, 
                                         self.target_template_img_filt, 
                                         self.src_tar_ep )
@@ -2712,12 +2771,12 @@ class BrainRegister(object):
                     self.target_template_img_filt = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
-                print('  saving source to target parameter map file[s]..')
+                self.print_and_log('  saving source to target parameter map file[s]..')
                 self.save_pm_files( self.src_tar_pm_paths )
                 
                 
         else:
-            print('  source to target parameter map file[s] already exist : No Registration')
+            self.print_and_log('  source to target parameter map file[s] already exist : No Registration')
             
             
     
@@ -2726,12 +2785,12 @@ class BrainRegister(object):
     
     def register_target_to_source(self):
         
-        print('')
-        print('')
-        print('================')
-        print('TARGET TO SOURCE')
-        print('================')
-        print('')
+        self.print_and_log('')
+        self.print_and_log('')
+        self.print_and_log('================')
+        self.print_and_log('TARGET TO SOURCE')
+        self.print_and_log('================')
+        self.print_and_log('')
         
         
         if self.tar_src_pm_files_exist() is False:
@@ -2747,18 +2806,18 @@ class BrainRegister(object):
                     
                     if self.source_template_path_ds.exists() == True:
                         
-                        print('  loading ds source template image : ', 
+                        self.print_and_log('  loading ds source template image : '+ 
                                         self.source_template_path_ds.name)
                         self.source_template_img_ds = self.load_image(self.source_template_path_ds)
                     else:
-                        print('  ds source template image does not exist -'+
+                        self.print_and_log('  ds source template image does not exist -'+
                                 ' generating from source template')
                         self.source_template_img_ds = self.get_template_ds()
                 
                 
                 if self.target_template_img == None:
                     
-                    print('  loading target template image : '+ 
+                    self.print_and_log('  loading target template image : '+ 
                                       self.target_template_path.name)
                     self.target_template_img = self.load_image(self.target_template_path)
                 
@@ -2769,15 +2828,15 @@ class BrainRegister(object):
                 
                 if self.tar_src_prefiltered == False: # if src_tar_filter is set to 'none'
                     # REGISTRATION - use unfiltered images
-                    print('  registering target to source..')
-                    print('    target : ' + 
+                    self.print_and_log('  registering target to source..')
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path) )
-                    print('    source : ' + 
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path_ds) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image( self.target_template_img, 
                                         self.source_template_img_ds, 
                                         self.tar_src_ep )
@@ -2792,15 +2851,15 @@ class BrainRegister(object):
                     self.source_template_img_ds = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
-                    print('  registering target to source after prefilter..')
-                    print('    target : ' + 
+                    self.print_and_log('  registering target to source after prefilter..')
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path) )
-                    print('    source : ' + 
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path_ds) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.target_template_img_filt, 
                                         self.source_template_img_ds_filt, 
                                         self.tar_src_ep )
@@ -2809,7 +2868,7 @@ class BrainRegister(object):
                     self.source_template_img_ds_filt = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
-                print('  saving target to source parameter map file[s]..')
+                self.print_and_log('  saving target to source parameter map file[s]..')
                 self.save_pm_files( self.tar_src_pm_paths )
                 
                 
@@ -2820,7 +2879,7 @@ class BrainRegister(object):
                  
                 if self.source_template_img == None:
                      
-                     print('  loading source template image : '+ 
+                     self.print_and_log('  loading source template image : '+ 
                                        self.source_template_path.name)
                      self.source_template_img = self.load_image(self.source_template_path)
                 
@@ -2829,11 +2888,11 @@ class BrainRegister(object):
                     
                     if self.target_template_path_ds.exists() == True:
                         
-                        print('  loading ds target template image : ', 
+                        self.print_and_log('  loading ds target template image : '+ 
                                         self.target_template_path_ds.name)
                         self.target_template_img_ds = self.load_image(self.target_template_path_ds)
                     else:
-                        print('  ds target template image does not exist -'+
+                        self.print_and_log('  ds target template image does not exist -'+
                                 ' generating from target template')
                         self.target_template_img_ds = self.get_template_ds()
                 
@@ -2844,15 +2903,15 @@ class BrainRegister(object):
                 
                 if self.tar_src_prefiltered == False: # if src_tar_filter is set to 'none'
                     # REGISTRATION - use unfiltered images
-                    print('  registering target to source..')
-                    print('    target : ' + 
+                    self.print_and_log('  registering target to source..')
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path_ds) )
-                    print('    source : ' + 
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.target_template_img_ds, 
                                         self.source_template_img,
                                         self.tar_src_ep )
@@ -2867,15 +2926,15 @@ class BrainRegister(object):
                     self.source_template_img = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
-                    print('  registering target to source after prefilter..')
-                    print('    target : ' + 
+                    self.print_and_log('  registering target to source after prefilter..')
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path_ds) )
-                    print('    source : ' + 
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.target_template_img_ds_filt, 
                                         self.source_template_img_filt, 
                                         self.tar_src_ep )
@@ -2884,7 +2943,7 @@ class BrainRegister(object):
                     self.source_template_img_filt = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
-                print('  saving source to target parameter map file[s]..')
+                self.print_and_log('  saving source to target parameter map file[s]..')
                 self.save_pm_files( self.tar_src_pm_paths )
                 
                 
@@ -2895,14 +2954,14 @@ class BrainRegister(object):
                 
                 if self.source_template_img == None:
                     
-                    print('  loading source template image : '+ 
+                    self.print_and_log('  loading source template image : '+ 
                                       self.source_template_path.name)
                     self.source_template_img = self.load_image(self.source_template_path)
                 
                 
                 if self.target_template_img == None:
                     
-                    print('  loading target template image : '+ 
+                    self.print_and_log('  loading target template image : '+ 
                                       self.target_template_path.name)
                     self.target_template_img = self.load_image(self.target_template_path)
                 
@@ -2913,15 +2972,15 @@ class BrainRegister(object):
                 
                 if self.tar_src_prefiltered == False: # if src_tar_filter is set to 'none'
                     # REGISTRATION - use unfiltered images
-                    print('  registering target to source..')
-                    print('    target : ' + 
+                    self.print_and_log('  registering target to source..')
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path) )
-                    print('    source : ' + 
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.target_template_img, 
                                         self.source_template_img, 
                                         self.tar_src_ep )
@@ -2936,15 +2995,15 @@ class BrainRegister(object):
                     self.source_template_img = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                     # REGISTRATION - use filt images
-                    print('  registering target to source after prefilter..')
-                    print('    target : ' + 
+                    self.print_and_log('  registering target to source after prefilter..')
+                    self.print_and_log('    target : ' + 
                                 self.get_relative_path(self.target_template_path) )
-                    print('    source : ' + 
+                    self.print_and_log('    source : ' + 
                                 self.get_relative_path(self.source_template_path) )
-                    print('')
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     self.register_image(self.target_template_img_filt,
                                         self.source_template_img_filt, 
                                         self.tar_src_ep )
@@ -2953,12 +3012,12 @@ class BrainRegister(object):
                     self.source_template_img_filt = None
                     garbage = gc.collect() # run garbage collection to ensure memory is freed
                 
-                print('  saving source to target parameter map file[s]..')
+                self.print_and_log('  saving source to target parameter map file[s]..')
                 self.save_pm_files( self.tar_src_pm_paths )
                 
                 
         else:
-            print('  target to source parameter map file[s] already exist : No Registration')
+            self.print_and_log('  target to source parameter map file[s] already exist : No Registration')
             
             
         
@@ -2974,21 +3033,21 @@ class BrainRegister(object):
         
             if self.brp['source-to-target-filter'] != "none":
                 
-                print('  running source to target prefilter..')
+                self.print_and_log('  running source to target prefilter..')
                 self.src_tar_filter_pipeline = self.compute_adaptive_filter(
                                             self.brp['source-to-target-filter'] )
                 
                 
                 if self.source_template_img_ds_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    ds source template')
+                        self.print_and_log('    ds source template')
                     else: # filter correctly
-                        print('    ds source template')
+                        self.print_and_log('    ds source template')
                         self.source_template_img_ds_filt = self.apply_adaptive_filter(
                                                     self.source_template_img_ds, 
                                                     self.src_tar_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    ds source template')
+                    self.print_and_log('    ds source template')
                     self.source_template_img_ds_filt = self.apply_adaptive_filter(
                                                 self.source_template_img_ds, 
                                                 self.src_tar_filter_pipeline )
@@ -2996,14 +3055,14 @@ class BrainRegister(object):
                 
                 if self.target_template_img_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    target template')
+                        self.print_and_log('    target template')
                     else: # filter correctly
-                        print('    target template')
+                        self.print_and_log('    target template')
                         self.target_template_img_filt = self.apply_adaptive_filter(
                                                     self.target_template_img, 
                                                     self.src_tar_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    target template')
+                    self.print_and_log('    target template')
                     self.target_template_img_filt = self.apply_adaptive_filter(
                                                 self.target_template_img, 
                                                 self.src_tar_filter_pipeline )
@@ -3013,7 +3072,7 @@ class BrainRegister(object):
                 self.tar_src_prefiltered = False
                 
             else: # no src-to-tar filtering, log this
-                print('  no source to target prefilter..')
+                self.print_and_log('  no source to target prefilter..')
                 
                 
                 
@@ -3022,67 +3081,21 @@ class BrainRegister(object):
         
             if self.brp['source-to-target-filter'] != "none":
                 
-                print('  running source to target prefilter..')
+                self.print_and_log('  running source to target prefilter..')
                 self.src_tar_filter_pipeline = self.compute_adaptive_filter(
                                             self.brp['source-to-target-filter'] )
                 
                 
                 if self.source_template_img_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    source template')
+                        self.print_and_log('    source template')
                     else: # filter correctly
-                        print('    source template')
+                        self.print_and_log('    source template')
                         self.source_template_img_filt = self.apply_adaptive_filter(
                                                     self.source_template_img, 
                                                     self.src_tar_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    source image')
-                    self.source_template_img_filt = self.apply_adaptive_filter(
-                                                self.source_template_img, 
-                                                self.src_tar_filter_pipeline )
-                    
-                
-                if self.target_template_img_filt != None:
-                    if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    target template')
-                    else: # filter correctly
-                        print('    target template')
-                        self.target_template_img_filt = self.apply_adaptive_filter(
-                                                    self.target_template_img, 
-                                                    self.src_tar_filter_pipeline )
-                else: # no filtered image exists!
-                    print('    target template')
-                    self.target_template_img_filt = self.apply_adaptive_filter(
-                                                self.target_template_img, 
-                                                self.src_tar_filter_pipeline )
-                
-                # set bools to indicate filtering
-                self.src_tar_prefiltered = True
-                self.tar_src_prefiltered = False
-                
-            else: # no src-to-tar filtering, log this
-                print('  no source to target prefilter..')
-                
-                
-        elif (self.downsampling_img == 'none'):
-            # target image & source img same resolution!
-            # so no downsampling to use!
-            if self.brp['source-to-target-filter'] != "none":
-                
-                print('  running source to target prefilter..')
-                self.src_tar_filter_pipeline = self.compute_adaptive_filter(
-                                            self.brp['source-to-target-filter'] )
-                
-                if self.source_template_img_filt != None:
-                    if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    source template')
-                    else: # filter correctly
-                        print('    source template')
-                        self.source_template_img_filt = self.apply_adaptive_filter(
-                                                    self.source_template_img, 
-                                                    self.src_tar_filter_pipeline )
-                else: # no filtered image exists!
-                    print('    source image')
+                    self.print_and_log('    source image')
                     self.source_template_img_filt = self.apply_adaptive_filter(
                                                 self.source_template_img, 
                                                 self.src_tar_filter_pipeline )
@@ -3090,14 +3103,14 @@ class BrainRegister(object):
                 
                 if self.target_template_img_ds_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    ds target template') # just log as if filtering took place
+                        self.print_and_log('    ds target template') # just log as if filtering took place
                     else: # filter correctly
-                        print('    ds target template')
+                        self.print_and_log('    ds target template')
                         self.target_template_img_ds_filt = self.apply_adaptive_filter(
                                                     self.target_template_img_ds, 
                                                     self.src_tar_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    ds target template')
+                    self.print_and_log('    ds target template')
                     self.target_template_img_ds_filt = self.apply_adaptive_filter(
                                                 self.target_template_img_ds, 
                                                 self.src_tar_filter_pipeline )
@@ -3107,7 +3120,53 @@ class BrainRegister(object):
                 self.tar_src_prefiltered = False
                 
             else: # no src-to-tar filtering, log this
-                print('  no source to target prefilter..')
+                self.print_and_log('  no source to target prefilter..')
+                
+                
+        elif (self.downsampling_img == 'none'):
+            # target image & source img same resolution!
+            # so no downsampling to use!
+            if self.brp['source-to-target-filter'] != "none":
+                
+                self.print_and_log('  running source to target prefilter..')
+                self.src_tar_filter_pipeline = self.compute_adaptive_filter(
+                                            self.brp['source-to-target-filter'] )
+                
+                if self.source_template_img_filt != None:
+                    if self.src_tar_prefiltered: # already correctly filtered!
+                        self.print_and_log('    source template')
+                    else: # filter correctly
+                        self.print_and_log('    source template')
+                        self.source_template_img_filt = self.apply_adaptive_filter(
+                                                    self.source_template_img, 
+                                                    self.src_tar_filter_pipeline )
+                else: # no filtered image exists!
+                    self.print_and_log('    source image')
+                    self.source_template_img_filt = self.apply_adaptive_filter(
+                                                self.source_template_img, 
+                                                self.src_tar_filter_pipeline )
+                    
+                
+                if self.target_template_img_filt != None:
+                    if self.src_tar_prefiltered: # already correctly filtered!
+                        self.print_and_log('    target template')
+                    else: # filter correctly
+                        self.print_and_log('    target template')
+                        self.target_template_img_filt = self.apply_adaptive_filter(
+                                                    self.target_template_img, 
+                                                    self.src_tar_filter_pipeline )
+                else: # no filtered image exists!
+                    self.print_and_log('    target template')
+                    self.target_template_img_filt = self.apply_adaptive_filter(
+                                                self.target_template_img, 
+                                                self.src_tar_filter_pipeline )
+                
+                # set bools to indicate filtering
+                self.src_tar_prefiltered = True
+                self.tar_src_prefiltered = False
+                
+            else: # no src-to-tar filtering, log this
+                self.print_and_log('  no source to target prefilter..')
                 
                 
     
@@ -3117,7 +3176,7 @@ class BrainRegister(object):
         
         if self.brp['target-to-source-filter'] != "none":
             
-            print('  running target to source prefilter..')
+            self.print_and_log('  running target to source prefilter..')
             self.tar_src_filter_pipeline = self.compute_adaptive_filter(
                                         self.brp['target-to-source-filter'] )
             
@@ -3129,14 +3188,14 @@ class BrainRegister(object):
                 
                 if self.source_template_img_ds_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    ds source template')
+                        self.print_and_log('    ds source template')
                     else: # filter correctly
-                        print('    ds source template')
+                        self.print_and_log('    ds source template')
                         self.source_template_img_ds_filt = self.apply_adaptive_filter(
                                                     self.source_template_img_ds, 
                                                     self.tar_src_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    ds source template')
+                    self.print_and_log('    ds source template')
                     self.source_template_img_ds_filt = self.apply_adaptive_filter(
                                                 self.source_template_img_ds, 
                                                 self.tar_src_filter_pipeline )
@@ -3144,14 +3203,14 @@ class BrainRegister(object):
                 
                 if self.target_template_img_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    target template')
+                        self.print_and_log('    target template')
                     else: # filter correctly
-                        print('    target template')
+                        self.print_and_log('    target template')
                         self.target_template_img_filt = self.apply_adaptive_filter(
                                                     self.target_template_img, 
                                                     self.tar_src_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    target template')
+                    self.print_and_log('    target template')
                     self.target_template_img_filt = self.apply_adaptive_filter(
                                                 self.target_template_img, 
                                                 self.tar_src_filter_pipeline )
@@ -3169,32 +3228,32 @@ class BrainRegister(object):
                 
                 if self.source_template_img_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    source template')
+                        self.print_and_log('    source template')
                     else: # filter correctly
-                        print('    source template')
+                        self.print_and_log('    source template')
                         self.source_template_img_filt = self.apply_adaptive_filter(
                                                     self.source_template_img, 
-                                                    self.src_tar_filter_pipeline )
+                                                    self.tar_src_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    source image')
+                    self.print_and_log('    source image')
                     self.source_template_img_filt = self.apply_adaptive_filter(
                                                 self.source_template_img, 
-                                                self.src_tar_filter_pipeline )
+                                                self.tar_src_filter_pipeline )
                     
                 
-                if self.target_template_img_filt != None:
+                if self.target_template_img_ds_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    target template')
+                        self.print_and_log('    target template')
                     else: # filter correctly
-                        print('    target template')
-                        self.target_template_img_filt = self.apply_adaptive_filter(
-                                                    self.target_template_img, 
-                                                    self.src_tar_filter_pipeline )
+                        self.print_and_log('    target template')
+                        self.target_template_img_ds_filt = self.apply_adaptive_filter(
+                                                    self.target_template_img_ds, 
+                                                    self.tar_src_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    target template')
-                    self.target_template_img_filt = self.apply_adaptive_filter(
-                                                self.target_template_img, 
-                                                self.src_tar_filter_pipeline )
+                    self.print_and_log('    target template')
+                    self.target_template_img_ds_filt = self.apply_adaptive_filter(
+                                                self.target_template_img_ds, 
+                                                self.tar_src_filter_pipeline )
                 
                 # set bools to indicate filtering
                 self.src_tar_prefiltered = False
@@ -3207,14 +3266,14 @@ class BrainRegister(object):
                 
                 if self.source_template_img_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    source template')
+                        self.print_and_log('    source template')
                     else: # filter correctly
-                        print('    source template')
+                        self.print_and_log('    source template')
                         self.source_template_img_filt = self.apply_adaptive_filter(
                                                     self.source_template_img, 
                                                     self.src_tar_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    source image')
+                    self.print_and_log('    source image')
                     self.source_template_img_filt = self.apply_adaptive_filter(
                                                 self.source_template_img, 
                                                 self.src_tar_filter_pipeline )
@@ -3222,14 +3281,14 @@ class BrainRegister(object):
                 
                 if self.target_template_img_ds_filt != None:
                     if self.src_tar_prefiltered: # already correctly filtered!
-                        print('    target template') # just log as if filtering took place
+                        self.print_and_log('    target template') # just log as if filtering took place
                     else: # filter correctly
-                        print('    target template')
+                        self.print_and_log('    target template')
                         self.target_template_img_filt = self.apply_adaptive_filter(
                                                     self.target_template_img, 
                                                     self.src_tar_filter_pipeline )
                 else: # no filtered image exists!
-                    print('    target template')
+                    self.print_and_log('    target template')
                     self.target_template_img_filt = self.apply_adaptive_filter(
                                                 self.target_template_img, 
                                                 self.src_tar_filter_pipeline )
@@ -3239,7 +3298,7 @@ class BrainRegister(object):
                 self.tar_src_prefiltered = True
                 
         else: # no src-to-tar filtering, log this
-            print('  no source to target prefilter..')
+            self.print_and_log('  no source to target prefilter..')
                 
                 
     
@@ -3270,6 +3329,10 @@ class BrainRegister(object):
                 pm = sitk.ReadParameterFile(
                          os.path.join(BRAINREGISTER_MODULE_DIR, 'resources', 
                                  'elastix-parameter-files', '02_bspline.txt') )
+                # CORRECT the FinalGridSpacingInVoxels
+                # rule of thumb - about 1 control point per 500µm
+                
+                pm['FinalGridSpacingInVoxels'] = ('10.000000', '10.000000', '10.000000')
                 
             else: # open relative file specified in pf
                 pm = sitk.ReadParameterFile( 
@@ -3303,10 +3366,10 @@ class BrainRegister(object):
             os.remove(rl)
             
         
-        print('')
-        print('========================================================================')
-        print('')
-        print('')
+        self.print_and_log('')
+        self.print_and_log('========================================================================')
+        self.print_and_log('')
+        self.print_and_log('')
         
         # get the registered image
         #img = elastixImageFilter.GetResultImage()
@@ -3431,90 +3494,90 @@ class BrainRegister(object):
                 self.source_template_img_target = self.get_src_template_tar()
                 self.save_src_template_tar()
             else:
-                print('')
-                print('  saving source template to target : image exists')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  saving source template to target : image exists')
+                self.print_and_log('')
             
         else:
-            print('')
-            print('  saving source template to target : not requested')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('  saving source template to target : not requested')
+            self.print_and_log('')
         
         
         if self.brp['source-to-target-save-annotations'] == True:
             
             
             if self.source_anno_path_target != []: # not a blank list
-                print('')
-                print('  source annotations to target : ')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  source annotations to target : ')
+                self.print_and_log('')
                 for i,im_ds in enumerate(self.source_anno_path_target):
                     # source_anno_path + _ds + _target all are SAME LENGTH!
-                    print('  annotation image ' + str(i))
+                    self.print_and_log('  annotation image ' + str(i))
                     anno_img = self.get_src_anno_tar(i)
-                    # save to local var, do not hold onto refs with self.source_image_img_target[i].append()
+                    # save to local var, do not hold onto refs with self.source_image_imgs_target[i].append()
                     # user can use load_src_anno_tar() to do this!s
                     self.save_src_anno_tar(i, anno_img)
                     anno_img = None # GUARANTEE memory is freed
                     garbage = gc.collect()
             else:
-                print('')
-                print('  source annotations to target : no annotation images')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  source annotations to target : no annotation images')
+                self.print_and_log('')
                 
             
             # ALSO SAVE the structure trees associated with the annos
             if self.source_tree_path_target != []: # not a blank list
-                print('')
-                print('  source annotation structure tree to target : ')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  source annotation structure tree to target : ')
+                self.print_and_log('')
                 for i,st_path in enumerate(self.source_tree_path):
                     # source_anno_path + _ds + _target all are SAME LENGTH!
                     if self.source_tree_path_target[i].exists() == False:
-                        print('  copying annotation structure tree to target ' + 
+                        self.print_and_log('  copying annotation structure tree to target ' + 
                           str(self.source_tree_path_target[i].resolve()))
                         shutil.copy(st_path, self.source_tree_path_target[i])
                     else:
-                        print('  annotation structure tree to target exists : ' + 
+                        self.print_and_log('  annotation structure tree to target exists : ' + 
                           str(self.source_tree_path_target[i].resolve()))
                     #anno_img = self.get_src_tree_tar(i)
                     #self.save_src_tree_tar(i, anno_img)
             else:
-                print('')
-                print('  source annotation structure trees to target : no trees to process')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  source annotation structure trees to target : no trees to process')
+                self.print_and_log('')
             
         else:
-            print('')
-            print('  saving source annotations to target : not requested')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('  saving source annotations to target : not requested')
+            self.print_and_log('')
         
         
         if self.brp['source-to-target-save-images'] == True:
             
             
-            if self.source_image_path_target != []: # not a blank list
-                print('')
-                print('  source images to target :')
-                print('')
-                for i,im_ds in enumerate(self.source_image_path_target):
+            if self.source_image_paths_target != []: # not a blank list
+                self.print_and_log('')
+                self.print_and_log('  source images to target :')
+                self.print_and_log('')
+                for i,im_ds in enumerate(self.source_image_paths_target):
                     # source_image_path + _ds + _target all are SAME LENGTH!
-                    print('  source image ' + str(i))
+                    self.print_and_log('  source image ' + str(i))
                     img_tar = self.get_src_image_tar(i)
-                    # save to local var, do not hold onto refs with self.source_image_img_target[i].append()
+                    # save to local var, do not hold onto refs with self.source_image_imgs_target[i].append()
                     # user can use load_src_images_tar() to do this!s
                     self.save_src_image_tar(i, img_tar)
                     img_Tar = None
                     garbage = gc.collect()
             else:
-                print('')
-                print('  source images to target : no further images')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  source images to target : no further images')
+                self.print_and_log('')
         
         else:
-            print('')
-            print('  saving source images to target : not requested')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('  saving source images to target : not requested')
+            self.print_and_log('')
             
         
         # discard from memory all images/martices not needed - just point vars to None
@@ -3535,90 +3598,90 @@ class BrainRegister(object):
                 self.target_template_img_source = self.get_tar_template_src()
                 self.save_tar_template_src()
             else:
-                print('')
-                print('  saving target template to source : image exists')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  saving target template to source : image exists')
+                self.print_and_log('')
         else:
-            print('')
-            print('  saving target template to source : not requested')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('  saving target template to source : not requested')
+            self.print_and_log('')
         
         
         if self.brp['target-to-source-save-annotations'] == True:
             
             
             if self.target_anno_path_source != []: # not a blank list
-                print('')
-                print('  target annotations to source : ')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  target annotations to source : ')
+                self.print_and_log('')
                 for i,im_ds in enumerate(self.target_anno_path_source):
                     # source_anno_path + _ds + _target all are SAME LENGTH!
-                    print('  annotation image ' + str(i))
+                    self.print_and_log('  annotation image ' + str(i))
                     anno_img = self.get_tar_anno_src(i)
-                    # save to local var, do not hold onto refs with self.source_image_img_target[i].append()
+                    # save to local var, do not hold onto refs with self.source_image_imgs_target[i].append()
                     # user can use load_src_anno_tar() to do this!s
                     self.save_tar_anno_src(i, anno_img)
                     anno_img = None
                     garbage = gc.collect()
             else:
-                print('')
-                print('  target annotations to source : no annotation images')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  target annotations to source : no annotation images')
+                self.print_and_log('')
             
             
             # ALSO SAVE the structure trees associated with the annos
             if self.target_tree_path_source != []: # not a blank list
-                print('')
-                print('  target annotation structure tree to source : ')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  target annotation structure tree to source : ')
+                self.print_and_log('')
                 for i,st_path in enumerate(self.target_tree_path):
                     # source_anno_path + _ds + _target all are SAME LENGTH!
                     if self.target_tree_path_source[i].exists() == False:
-                        print('  copying annotation structure tree to source ' + 
+                        self.print_and_log('  copying annotation structure tree to source ' + 
                           str(self.target_tree_path_source[i].resolve()))
                         shutil.copy(st_path, self.target_tree_path_source[i])
                     else:
-                        print('  annotation structure tree to source exists : ' + 
+                        self.print_and_log('  annotation structure tree to source exists : ' + 
                           str(self.target_tree_path_source[i].resolve()))
                     #anno_img = self.get_src_tree_tar(i)
                     #self.save_src_tree_tar(i, anno_img)
             else:
-                print('')
-                print('  target annotation structure trees to source : no trees to process')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  target annotation structure trees to source : no trees to process')
+                self.print_and_log('')
             
         
         else:
-            print('')
-            print('  saving target annotations to source : not requested')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('  saving target annotations to source : not requested')
+            self.print_and_log('')
         
         
         if self.brp['target-to-source-save-images'] == True:
             
             
             if self.target_image_paths_source != []: # not a blank list
-                print('')
-                print('  target images to source :')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  target images to source :')
+                self.print_and_log('')
                 for i,im_ds in enumerate(self.target_image_paths_source):
                     # source_image_path + _ds + _target all are SAME LENGTH!
-                    print('  target image ' + str(i))
+                    self.print_and_log('  target image ' + str(i))
                     img_tar = self.get_tar_image_src(i)
-                    # save to local var, do not hold onto refs with self.source_image_img_target[i].append()
+                    # save to local var, do not hold onto refs with self.source_image_imgs_target[i].append()
                     # user can use load_src_images_tar() to do this!s
                     self.save_tar_image_src(i, img_tar)
                     img_tar = None
                     garbage = gc.collect()
             else:
-                print('')
-                print('  target images to source : no further images')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  target images to source : no further images')
+                self.print_and_log('')
         
         else:
-            print('')
-            print('  saving target images to source : not requested')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('  saving target images to source : not requested')
+            self.print_and_log('')
             
         
         # discard from memory all images/martices not needed - just point vars to blank list!
@@ -3654,21 +3717,21 @@ class BrainRegister(object):
                     
                     # sr-to-tar defines ds-soruce to target transform
                     if self.src_tar_pm is None:
-                        print('  source to target paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                     
-                    print('  transforming source template downsampled image to target..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming source template downsampled image to target..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(self.source_template_path_ds) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target parameter map file '+
+                        self.print_and_log('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     img = self.transform_image(self.source_template_img_ds, 
                                                   self.src_tar_pm )
                     self.source_template_img_ds = None
@@ -3676,11 +3739,11 @@ class BrainRegister(object):
                     return img
                 
                 else:
-                    print('  downsampled source template to target space exists - returning image..')
+                    self.print_and_log('  downsampled source template to target space exists - returning image..')
                     return self.source_template_img_target
             
             else:
-                print('  downsampled source template to target space exists - loading image..')
+                self.print_and_log('  downsampled source template to target space exists - loading image..')
                 return self.load_image(self.source_template_path_target)
                 #return self.source_template_img_target
             
@@ -3695,26 +3758,26 @@ class BrainRegister(object):
                     
                     # get source image
                     if self.source_template_img is None: # AND path exists!
-                        print('  source template image not loaded - loading image..')
+                        self.print_and_log('  source template image not loaded - loading image..')
                         self.source_template_img = self.load_image(self.source_template_path)
                     
                     
                     if self.src_tar_pm is None: # this gives source to ds target
-                        print('  source to target paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                     
-                    print('  transforming source template image to downsampled target..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming source template image to downsampled target..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(self.source_template_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-downsampled-target parameter map file '+
+                        self.print_and_log('    source-to-downsampled-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     img = self.transform_image(self.source_template_img, 
                                                   self.src_tar_pm )
                     self.source_template_img = None
@@ -3723,11 +3786,11 @@ class BrainRegister(object):
                     return self.move_image_ds_img(img) # input img discarded in method!
                     
                 else:
-                    print('  source template to target space exists - returning image..')
+                    self.print_and_log('  source template to target space exists - returning image..')
                     return self.source_template_img_target
             
             else:
-                print('  source template to target space exists - loading image..')
+                self.print_and_log('  source template to target space exists - loading image..')
                 return self.load_image(self.source_template_path_target)
                 #return self.source_template_img_target
         
@@ -3741,26 +3804,26 @@ class BrainRegister(object):
                     # and if the output image is not already loaded!
                     
                     if self.source_template_img is None: # AND path exists!
-                        print('  source template image not loaded - loading image..')
+                        self.print_and_log('  source template image not loaded - loading image..')
                         self.source_template_img = self.load_image(self.source_template_path)
                     
                     
                     if self.src_tar_pm is None:
-                        print('  source to target paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                     
-                    print('  transforming source template image to target..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming source template image to target..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(self.source_template_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target parameter map file '+
+                        self.print_and_log('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     img = self.transform_image(self.source_template_img, 
                                                   self.src_tar_pm )
                     self.source_template_img = None
@@ -3768,11 +3831,11 @@ class BrainRegister(object):
                     return img
                 
                 else:
-                    print('  source template to target space exists - returning image..')
+                    self.print_and_log('  source template to target space exists - returning image..')
                     return self.source_template_img_target
             
             else:
-                print('  source template to target space exists - loading image..')
+                self.print_and_log('  source template to target space exists - loading image..')
                 return self.load_image(self.source_template_path_target)
                 #return self.source_template_img_target
         
@@ -3783,7 +3846,7 @@ class BrainRegister(object):
         
         if self.source_template_path_target.exists() == False:
             if self.source_template_img_target != None:
-                print('  saving source template to target : ' + 
+                self.print_and_log('  saving source template to target : ' + 
                       self.get_relative_path(self.source_template_path_target))
                 self.save_image(self.source_template_img_target, self.source_template_path_target)
                 # FREE MEMORY
@@ -3791,10 +3854,10 @@ class BrainRegister(object):
                 garbage = gc.collect()
                 
             else:
-                print('  source template in target space does not exist - run get_src_template_tar()')
+                self.print_and_log('  source template in target space does not exist - run get_src_template_tar()')
                 
         else:
-            print('  source template in target image space exists')
+            self.print_and_log('  source template in target image space exists')
     
     
     
@@ -3812,31 +3875,31 @@ class BrainRegister(object):
                     # and if the output anno is not already loaded!
                     
                     if im_path.exists() == False:
-                        print('  transforming downsampled source annotation from source anno..')
+                        self.print_and_log('  transforming downsampled source annotation from source anno..')
                         img_ds = self.load_transform_anno_img_ds(self.source_anno_path[index])
                     
                     else:
-                        print('  loading downsampled source annotation..')
+                        self.print_and_log('  loading downsampled source annotation..')
                         img_ds = self.load_image(im_path)
                     
                     
                     if self.src_tar_pm_anno is None:
-                        print('  source to target annotation paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target annotation paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                         if self.src_tar_pm == None:
                             print("ERROR : src_tar_ds_pm files do not exist - run register() first")
                         self.src_tar_pm_anno = self.edit_pms_nearest_neighbour(self.src_tar_pm)
                     
                     
-                    print('  transforming source downsampled annotation to target..')
-                    print('    image : ' + self.get_relative_path(im_path) )
+                    self.print_and_log('  transforming source downsampled annotation to target..')
+                    self.print_and_log('    image : ' + self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target parameter map file '+
+                        self.print_and_log('    source-to-target parameter map file '+
                                 str(i) + ' : ' + self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     img_ds_tar = self.transform_image(img_ds, self.src_tar_pm_anno)
                     img_ds = None
@@ -3845,11 +3908,11 @@ class BrainRegister(object):
                     return img_ds_tar
                 
                 else:
-                    print('  source annotation to target space exists - returning image..')
+                    self.print_and_log('  source annotation to target space exists - returning image..')
                     return self.source_anno_img_target[index]
                 
             else:
-                print('  source annotation to target space exists - loading image..')
+                self.print_and_log('  source annotation to target space exists - loading image..')
                 return self.load_image(self.source_anno_path_target[index])
             
             
@@ -3863,27 +3926,27 @@ class BrainRegister(object):
                 if self.source_anno_img_target[index] == None: 
                     # and if the output anno is not already loaded!
                     
-                    print('  loading source annotation..')
+                    self.print_and_log('  loading source annotation..')
                     img_ds = self.load_image(im_path)
                     
                     
                     if self.src_tar_pm_anno is None:
-                        print('  source to target annotation paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target annotation paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                         if self.src_tar_pm == None:
                             print("ERROR : src_tar_ds_pm files do not exist - run register() first")
                         self.src_tar_pm_anno = self.edit_pms_nearest_neighbour(self.src_tar_pm)
                     
                     
-                    print('  transforming source annotation to downsampled target..')
-                    print('    image : ' + self.get_relative_path(im_path) )
+                    self.print_and_log('  transforming source annotation to downsampled target..')
+                    self.print_and_log('    image : ' + self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target parameter map file '+
+                        self.print_and_log('    source-to-target parameter map file '+
                                 str(i) + ' : ' + self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     anno_ds_tar = self.transform_image(img_ds, self.src_tar_pm_anno)
                     img_ds = None
@@ -3892,11 +3955,11 @@ class BrainRegister(object):
                     return self.move_anno_ds_img(anno_ds_tar)
                 
                 else:
-                    print('  source annotation to target space exists - returning image..')
+                    self.print_and_log('  source annotation to target space exists - returning image..')
                     return self.source_anno_img_target[index]
                 
             else:
-                print('  source annotation to target space exists - loading image..')
+                self.print_and_log('  source annotation to target space exists - loading image..')
                 return self.load_image(self.source_anno_path_target[index])
             
             
@@ -3910,27 +3973,27 @@ class BrainRegister(object):
                 if self.source_anno_img_target[index] == None: 
                     # and if the output anno is not already loaded!
                     
-                    print('  loading source annotation..')
+                    self.print_and_log('  loading source annotation..')
                     img_ds = self.load_image(im_path)
                     
                     
                     if self.src_tar_pm_anno is None:
-                        print('  source to target annotation paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target annotation paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                         if self.src_tar_pm == None:
                             print("ERROR : src_tar_ds_pm files do not exist - run register() first")
                         self.src_tar_pm_anno = self.edit_pms_nearest_neighbour(self.src_tar_pm)
                     
                     
-                    print('  transforming source annotation to target..')
-                    print('    image : ' + self.get_relative_path(im_path) )
+                    self.print_and_log('  transforming source annotation to target..')
+                    self.print_and_log('    image : ' + self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target parameter map file '+
+                        self.print_and_log('    source-to-target parameter map file '+
                                 str(i) + ' : ' + self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     img = self.transform_image(img_ds, self.src_tar_pm_anno)
                     img_ds = None
@@ -3939,11 +4002,11 @@ class BrainRegister(object):
                     return img
                     
                 else:
-                    print('  source annotation to target space exists - returning image..')
+                    self.print_and_log('  source annotation to target space exists - returning image..')
                     return self.source_anno_img_target[index]
                 
             else:
-                print('  source annotation to target space exists - loading image..')
+                self.print_and_log('  source annotation to target space exists - loading image..')
                 return self.load_image(self.source_anno_path_target[index])
             
         
@@ -3956,7 +4019,7 @@ class BrainRegister(object):
         #if (self.downsampling_img == 'source'):
         # ds source images to target img 
         if self.source_anno_path_target[index].exists() == False: # only save if output does not exist
-            print('  saving source annotation to target : ' +
+            self.print_and_log('  saving source annotation to target : ' +
                   self.get_relative_path(self.source_anno_path_target[index] ) )
             self.save_image(image, self.source_anno_path_target[index])
         
@@ -3966,7 +4029,7 @@ class BrainRegister(object):
     
     def load_src_anno_tar(self):
         '''
-        Load all source annotation images to target into instance variable self.source_image_img_target
+        Load all source annotation images to target into instance variable self.source_image_imgs_target
         '''
         if (self.downsampling_img == 'source'):
             # ds source images to target img 
@@ -3981,144 +4044,144 @@ class BrainRegister(object):
         
         if (self.downsampling_img == 'source'):
             # ds source images to target img 
-            im_path = self.source_image_path_ds[index]
+            im_path = self.source_image_paths_ds[index]
             
-            if self.source_image_path_target[index].exists() == False: 
+            if self.source_image_paths_target[index].exists() == False: 
                 # only transform if output does not exist
-                if self.source_image_img_target[index] == None: 
+                if self.source_image_imgs_target[index] == None: 
                     # and if the output image is not already loaded!
                     
                     if im_path.exists() == False:
-                        print('  transforming downsampled source image from source image..')
-                        img_ds = self.load_transform_image_img_ds(self.source_image_path[index])
+                        self.print_and_log('  transforming downsampled source image from source image..')
+                        img_ds = self.load_transform_image_img_ds(self.source_image_paths[index])
                     
                     else:
-                        print('  loading downsampled source image..')
+                        self.print_and_log('  loading downsampled source image..')
                         img_ds = self.load_image(im_path)
                     
                     
                     if self.src_tar_pm is None:
-                        print('  source to target paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                     
                     
-                    print('  transforming source downsampled image to target..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming source downsampled image to target..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target parameter map file '+
+                        self.print_and_log('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     img_tar = self.transform_image(img_ds, self.src_tar_pm)
                     img_ds = None
                     garbage = gc.collect()
-                    # not saving to self.source_image_img_target[index] to minimise memory occupation
+                    # not saving to self.source_image_imgs_target[index] to minimise memory occupation
                     return img_tar
                 
                 else:
-                    print('  downsampled source image to target space exists - returning image..')
-                    return self.source_image_img_target[index]
+                    self.print_and_log('  downsampled source image to target space exists - returning image..')
+                    return self.source_image_imgs_target[index]
                 
             else:
-                print('  downsampled source image to target space exists - loading image..')
-                img_tar = self.load_image(self.source_image_path_target[index])
+                self.print_and_log('  downsampled source image to target space exists - loading image..')
+                img_tar = self.load_image(self.source_image_paths_target[index])
                 return img_tar
             
             
         if (self.downsampling_img == 'target'):
             # source anno to ds target THEN ds to target image space
-            im_path = self.source_image_path[index]
+            im_path = self.source_image_paths[index]
             
-            if self.source_image_path_target[index].exists() == False: 
+            if self.source_image_paths_target[index].exists() == False: 
                 # only transform if output does not exist
-                if self.source_image_img_target[index] == None: 
+                if self.source_image_imgs_target[index] == None: 
                     # and if the output image is not already loaded!
                     
-                    print('  loading source image..')
+                    self.print_and_log('  loading source image..')
                     img_ds = self.load_image(im_path)
                     
                     
                     if self.src_tar_pm is None:
-                        print('  source to target paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                     
                     
-                    print('  transforming source downsampled image to target..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming source downsampled image to target..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target parameter map file '+
+                        self.print_and_log('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     img_tar = self.transform_image(img_ds, self.src_tar_pm)
                     img_ds = None
                     garbage = gc.collect()
-                    # not saving to self.source_image_img_target[index] to minimise memory occupation
+                    # not saving to self.source_image_imgs_target[index] to minimise memory occupation
                     return self.move_image_ds_img(img_tar) # input img discarded in method!
                 
                 else:
-                    print('  downsampled source image to target space exists - returning image..')
-                    return self.source_image_img_target[index]
+                    self.print_and_log('  downsampled source image to target space exists - returning image..')
+                    return self.source_image_imgs_target[index]
                 
             else:
-                print('  downsampled source image to target space exists - loading image..')
-                img_tar = self.load_image(self.source_image_path_target[index])
+                self.print_and_log('  downsampled source image to target space exists - loading image..')
+                img_tar = self.load_image(self.source_image_paths_target[index])
                 return img_tar
             
             
         if (self.downsampling_img == 'none'):
             # source anno to ds target THEN ds to target image space
-            im_path = self.source_image_path[index]
+            im_path = self.source_image_paths[index]
             
-            if self.source_image_path_target[index].exists() == False: 
+            if self.source_image_paths_target[index].exists() == False: 
                 # only transform if output does not exist
-                if self.source_image_img_target[index] == None: 
+                if self.source_image_imgs_target[index] == None: 
                     # and if the output image is not already loaded!
                     
-                    print('  loading source image..')
+                    self.print_and_log('  loading source image..')
                     img_ds = self.load_image(im_path)
                     
                     
                     if self.src_tar_pm is None:
-                        print('  source to target paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                     
                     
-                    print('  transforming source downsampled image to target..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming source downsampled image to target..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target parameter map file '+
+                        self.print_and_log('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     img = self.transform_image(img_ds, self.src_tar_pm)
                     img_ds = None
                     garbage = gc.collect()
-                    # not saving to self.source_image_img_target[index] to minimise memory occupation
+                    # not saving to self.source_image_imgs_target[index] to minimise memory occupation
                     return img
                     
                 else:
-                    print('  downsampled source image to target space exists - returning image..')
-                    return self.source_image_img_target[index]
+                    self.print_and_log('  downsampled source image to target space exists - returning image..')
+                    return self.source_image_imgs_target[index]
                 
             else:
-                print('  downsampled source image to target space exists - loading image..')
-                img_tar = self.load_image(self.source_image_path_target[index])
+                self.print_and_log('  downsampled source image to target space exists - loading image..')
+                img_tar = self.load_image(self.source_image_paths_target[index])
                 return img_tar
         
         
@@ -4129,10 +4192,10 @@ class BrainRegister(object):
         
         #if (self.downsampling_img == 'source'):
         # ds source images to target img 
-        if self.source_image_path_target[index].exists() == False: # only save if output does not exist
-            print('  saving source image to target : ' +
-                  self.get_relative_path(self.source_image_path_target[index] ) )
-            self.save_image(image, self.source_image_path_target[index])
+        if self.source_image_paths_target[index].exists() == False: # only save if output does not exist
+            self.print_and_log('  saving source image to target : ' +
+                  self.get_relative_path(self.source_image_paths_target[index] ) )
+            self.save_image(image, self.source_image_paths_target[index])
         
         
     
@@ -4140,12 +4203,12 @@ class BrainRegister(object):
     
     def load_src_images_tar(self):
         '''
-        Load all source images to target into instance variable self.source_image_img_target
+        Load all source images to target into instance variable self.source_image_imgs_target
         '''
         if (self.downsampling_img == 'source'):
             # ds source images to target img 
-            for i,im_ds in enumerate(self.source_image_path_ds):
-                self.source_image_img_target[i] = self.get_src_image_tar(i)
+            for i,im_ds in enumerate(self.source_image_paths_ds):
+                self.source_image_imgs_target[i] = self.get_src_image_tar(i)
         
     
     
@@ -4178,21 +4241,21 @@ class BrainRegister(object):
                     
                     
                     if self.tar_src_pm is None:
-                        print('  target to source paramater maps not loaded - loading files..')
+                        self.print_and_log('  target to source paramater maps not loaded - loading files..')
                         self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                     
-                    print('  transforming target template downsampled image to source..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming target template downsampled image to source..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(self.target_template_path_ds) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source parameter map file '+
+                        self.print_and_log('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     img = self.transform_image(self.target_template_img_ds, 
                                                   self.tar_src_pm )
                     self.target_template_img_ds = None
@@ -4200,11 +4263,11 @@ class BrainRegister(object):
                     return img
                 
                 else:
-                    print('  downsampled target template to source space exists - returning image..')
+                    self.print_and_log('  downsampled target template to source space exists - returning image..')
                     return self.target_template_img_source
             
             else:
-                print('  downsampled target template to source space exists - loading image..')
+                self.print_and_log('  downsampled target template to source space exists - loading image..')
                 return self.load_image(self.target_template_path_source)
                 #return self.target_template_img_source
             
@@ -4219,26 +4282,26 @@ class BrainRegister(object):
                     
                     # get source image
                     if self.target_template_img is None: # AND path exists!
-                        print('  target template image not loaded - loading image..')
+                        self.print_and_log('  target template image not loaded - loading image..')
                         self.target_template_img = self.load_image(self.target_template_path)
                     
                     
                     if self.tar_src_pm is None: # this gives source to ds target
-                        print('  target to source paramater maps not loaded - loading files..')
+                        self.print_and_log('  target to source paramater maps not loaded - loading files..')
                         self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                     
-                    print('  transforming target template image to downsampled source..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming target template image to downsampled source..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(self.target_template_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-downsampled source parameter map file '+
+                        self.print_and_log('    target-to-downsampled source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     img = self.transform_image(self.target_template_img, 
                                                   self.tar_src_pm )
                     self.target_template_img = None
@@ -4247,11 +4310,11 @@ class BrainRegister(object):
                     return self.move_image_ds_img(img) # input img discarded in method!
                     
                 else:
-                    print('  target template to source space exists - returning image..')
+                    self.print_and_log('  target template to source space exists - returning image..')
                     return self.target_template_img_source
             
             else:
-                print('  target template to source space exists - loading image..')
+                self.print_and_log('  target template to source space exists - loading image..')
                 return self.load_image(self.target_template_path_source)
                 #return self.target_template_img_source
         
@@ -4265,26 +4328,26 @@ class BrainRegister(object):
                     # and if the output image is not already loaded!
                     
                     if self.target_template_img is None: # AND path exists!
-                        print('  target template image not loaded - loading image..')
+                        self.print_and_log('  target template image not loaded - loading image..')
                         self.target_template_img = self.load_image(self.target_template_path)
                     
                     
                     if self.tar_src_pm is None:
-                        print('  source to target paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target paramater maps not loaded - loading files..')
                         self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                     
-                    print('  transforming target template image to source..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming target template image to source..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(self.target_template_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source parameter map file '+
+                        self.print_and_log('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
                     
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     img = self.transform_image(self.target_template_img, 
                                                   self.src_tar_pm )
                     self.target_template_img = None
@@ -4292,11 +4355,11 @@ class BrainRegister(object):
                     return img
                 
                 else:
-                    print('  target template to source space exists - returning image..')
+                    self.print_and_log('  target template to source space exists - returning image..')
                     return self.target_template_img_source
             
             else:
-                print('  target template to source space exists - loading image..')
+                self.print_and_log('  target template to source space exists - loading image..')
                 return self.load_image(self.target_template_path_source)
                 #return self.target_template_img_source
         
@@ -4307,16 +4370,16 @@ class BrainRegister(object):
         
         if self.target_template_path_source.exists() == False:
             if self.target_template_img_source != None:
-                print('  saving target template to source : ' + 
+                self.print_and_log('  saving target template to source : ' + 
                       self.get_relative_path(self.target_template_path_source))
                 self.save_image(self.target_template_img_source, self.target_template_path_source)
                 self.target_template_img_source = None
                 garbage = gc.collect() # ENSURE data is removed from memory
             else:
-                print('  target template in source space does not exist - run get_tar_template_src()')
+                self.print_and_log('  target template in source space does not exist - run get_tar_template_src()')
                 
         else:
-            print('  target template in source image space exists')
+            self.print_and_log('  target template in source image space exists')
     
     
     
@@ -4334,42 +4397,42 @@ class BrainRegister(object):
                     # and if the output anno is not already loaded!
                     
                     if im_path.exists() == False:
-                        print('  transforming downsampled target annotation from target anno..')
+                        self.print_and_log('  transforming downsampled target annotation from target anno..')
                         img_ds = self.load_transform_anno_img_ds(self.target_anno_path[index])
                     
                     else:
-                        print('  loading downsampled target annotation..')
+                        self.print_and_log('  loading downsampled target annotation..')
                         img_ds = self.load_image(im_path)
                     
                     
                     if self.tar_src_pm_anno is None:
-                        print('  target to source annotation paramater maps not loaded - loading files..')
+                        self.print_and_log('  target to source annotation paramater maps not loaded - loading files..')
                         self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                         if self.tar_src_pm == None:
                             print("ERROR : tar_src_ds_pm files do not exist - run register() first")
                         self.tar_src_pm_anno = self.edit_pms_nearest_neighbour(self.tar_src_pm)
                     
                     
-                    print('  transforming target downsampled annotation to source..')
-                    print('    image : ' + self.get_relative_path(im_path) )
+                    self.print_and_log('  transforming target downsampled annotation to source..')
+                    self.print_and_log('    image : ' + self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source parameter map file '+
+                        self.print_and_log('    target-to-source parameter map file '+
                                 str(i) + ' : ' + self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     img_ds_tar = self.transform_image(img_ds, self.tar_src_pm_anno)
                     # not saving to self.target_anno_img_source[index] to minimise memory occupation
                     return img_ds_tar
                 
                 else:
-                    print('  target annotation to source space exists - returning image..')
+                    self.print_and_log('  target annotation to source space exists - returning image..')
                     return self.target_anno_img_source[index]
                 
             else:
-                print('  target annotation to source space exists - loading image..')
+                self.print_and_log('  target annotation to source space exists - loading image..')
                 # not saving to self.target_anno_img_source[index] to minimise memory occupation
                 return self.load_image(self.target_anno_path_source[index])
             
@@ -4384,38 +4447,38 @@ class BrainRegister(object):
                 if self.target_anno_img_source[index] == None: 
                     # and if the output anno is not already loaded!
                     
-                    print('  loading target annotation..')
+                    self.print_and_log('  loading target annotation..')
                     img_ds = self.load_image(im_path)
                     
                     
                     if self.tar_src_pm_anno is None:
-                        print('  target to source annotation paramater maps not loaded - loading files..')
+                        self.print_and_log('  target to source annotation paramater maps not loaded - loading files..')
                         self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                         if self.tar_src_pm == None:
                             print("ERROR : tar_src_ds_pm files do not exist - run register() first")
                         self.tar_src_pm_anno = self.edit_pms_nearest_neighbour(self.tar_src_pm)
                     
                     
-                    print('  transforming target annotation to downsampled source..')
-                    print('    image : ' + self.get_relative_path(im_path) )
+                    self.print_and_log('  transforming target annotation to downsampled source..')
+                    self.print_and_log('    image : ' + self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source parameter map file '+
+                        self.print_and_log('    target-to-source parameter map file '+
                                 str(i) + ' : ' + self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     anno_ds_src = self.transform_image(img_ds, self.tar_src_pm_anno)
                     # not saving to self.source_anno_img_target[index] to minimise memory occupation
                     return self.move_anno_ds_img(anno_ds_src)
                 
                 else:
-                    print('  target annotation to source space exists - returning image..')
+                    self.print_and_log('  target annotation to source space exists - returning image..')
                     return self.target_anno_img_source[index]
                 
             else:
-                print('  target annotation to source space exists - loading image..')
+                self.print_and_log('  target annotation to source space exists - loading image..')
                 return self.load_image(self.target_anno_path_source[index])
             
             
@@ -4429,37 +4492,37 @@ class BrainRegister(object):
                 if self.target_anno_img_source[index] == None: 
                     # and if the output anno is not already loaded!
                     
-                    print('  loading downsampled target annotation..')
+                    self.print_and_log('  loading downsampled target annotation..')
                     img_ds = self.load_image(im_path)
                     
                     
                     if self.tar_src_pm_anno is None:
-                        print('  target to source annotation paramater maps not loaded - loading files..')
+                        self.print_and_log('  target to source annotation paramater maps not loaded - loading files..')
                         self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                         if self.tar_src_pm == None:
                             print("ERROR : tar_src_ds_pm files do not exist - run register() first")
                         self.tar_src_pm_anno = self.edit_pms_nearest_neighbour(self.tar_src_pm)
                     
                     
-                    print('  transforming target annotation to source..')
-                    print('    image : ' + self.get_relative_path(im_path) )
+                    self.print_and_log('  transforming target annotation to source..')
+                    self.print_and_log('    image : ' + self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source parameter map file '+
+                        self.print_and_log('    target-to-source parameter map file '+
                                 str(i) + ' : ' + self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     return self.transform_image(img_ds, self.tar_src_pm_anno)
                     # not saving to self.target_anno_img_source[index] to minimise memory occupation
                     
                 else:
-                    print('  target annotation to source space exists - returning image..')
+                    self.print_and_log('  target annotation to source space exists - returning image..')
                     return self.target_anno_img_source[index]
                 
             else:
-                print('  target annotation to source space exists - loading image..')
+                self.print_and_log('  target annotation to source space exists - loading image..')
                 # not saving to self.target_anno_img_source[index] to minimise memory occupation
                 return self.load_image(self.target_anno_path_source[index])
             
@@ -4473,7 +4536,7 @@ class BrainRegister(object):
         #if (self.downsampling_img == 'source'):
         # ds source images to target img 
         if self.target_anno_path_source[index].exists() == False: # only save if output does not exist
-            print('  saving target annotation to source : ' +
+            self.print_and_log('  saving target annotation to source : ' +
                   self.get_relative_path(self.target_anno_path_source[index] ) )
             self.save_image(image, self.target_anno_path_source[index])
         
@@ -4506,41 +4569,41 @@ class BrainRegister(object):
                     # and if the output image is not already loaded!
                     
                     if im_path.exists() == False:
-                        print('  transforming downsampled target image from target image..')
+                        self.print_and_log('  transforming downsampled target image from target image..')
                         img_ds = self.load_transform_image_img_ds(self.target_image_path[index])
                     
                     else:
-                        print('  loading downsampled target image..')
+                        self.print_and_log('  loading downsampled target image..')
                         img_ds = self.load_image(im_path)
                     
                     
                     if self.tar_src_pm is None:
-                        print('  target to source paramater maps not loaded - loading files..')
+                        self.print_and_log('  target to source paramater maps not loaded - loading files..')
                         self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                     
                     
-                    print('  transforming target downsampled image to source..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming target downsampled image to source..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source parameter map file '+
+                        self.print_and_log('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     img_src = self.transform_image(img_ds, self.tar_src_pm)
                     # not saving to self.target_image_img_source[index] to minimise memory occupation
                     return img_src
                 
                 else:
-                    print('  downsampled target image to source space exists - returning image..')
+                    self.print_and_log('  downsampled target image to source space exists - returning image..')
                     return self.target_image_img_source[index]
                 
             else:
-                print('  downsampled target image to source space exists - loading image..')
+                self.print_and_log('  downsampled target image to source space exists - loading image..')
                 img_src = self.load_image(self.target_image_paths_source[index])
                 # not saving to self.target_image_img_source[index] to minimise memory occupation
                 return img_src
@@ -4555,26 +4618,26 @@ class BrainRegister(object):
                 if self.target_image_img_source[index] == None: 
                     # and if the output image is not already loaded!
                     
-                    print('  loading downsampled target image..')
+                    self.print_and_log('  loading downsampled target image..')
                     img_ds = self.load_image(im_path)
                     
                     
                     if self.tar_src_pm is None:
-                        print('  target to source paramater maps not loaded - loading files..')
+                        self.print_and_log('  target to source paramater maps not loaded - loading files..')
                         self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                     
                     
-                    print('  transforming target downsampled image to source..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming target downsampled image to source..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source parameter map file '+
+                        self.print_and_log('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     img_src = self.transform_image(img_ds, self.tar_src_pm)
                     img_ds = None
@@ -4583,11 +4646,11 @@ class BrainRegister(object):
                     return self.move_image_ds_img(img_src)
                 
                 else:
-                    print('  downsampled target image to source space exists - returning image..')
+                    self.print_and_log('  downsampled target image to source space exists - returning image..')
                     return self.target_image_img_source[index]
                 
             else:
-                print('  downsampled target image to source space exists - loading image..')
+                self.print_and_log('  downsampled target image to source space exists - loading image..')
                 img_src = self.load_image(self.target_image_paths_source[index])
                 # not saving to self.target_image_img_source[index] to minimise memory occupation
                 return img_src
@@ -4602,36 +4665,36 @@ class BrainRegister(object):
                 if self.target_image_img_source[index] == None: 
                     # and if the output image is not already loaded!
                     
-                    print('  loading downsampled target image..')
+                    self.print_and_log('  loading downsampled target image..')
                     img_ds = self.load_image(im_path)
                     
                     
                     if self.tar_src_pm is None:
-                        print('  target to source paramater maps not loaded - loading files..')
+                        self.print_and_log('  target to source paramater maps not loaded - loading files..')
                         self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                     
                     
-                    print('  transforming target downsampled image to source..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming target downsampled image to source..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(im_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source parameter map file '+
+                        self.print_and_log('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     return self.transform_image(img_ds, self.tar_src_pm)
                     # not saving to self.target_image_img_source[index] to minimise memory occupation
                     
                 else:
-                    print('  downsampled target image to source space exists - returning image..')
+                    self.print_and_log('  downsampled target image to source space exists - returning image..')
                     return self.target_image_img_source[index]
                 
             else:
-                print('  downsampled target image to source space exists - loading image..')
+                self.print_and_log('  downsampled target image to source space exists - loading image..')
                 img_src = self.load_image(self.target_image_paths_source[index])
                 # not saving to self.target_image_img_source[index] to minimise memory occupation
                 return img_src
@@ -4645,7 +4708,7 @@ class BrainRegister(object):
         #if (self.downsampling_img == 'source'):
         # ds target images to source img 
         if self.target_image_paths_source[index].exists() == False: # only save if output does not exist
-            print('  saving target image to source : ' +
+            self.print_and_log('  saving target image to source : ' +
                   self.get_relative_path(self.target_image_paths_source[index] ) )
             self.save_image(image, self.target_image_paths_source[index])
         
@@ -4687,12 +4750,12 @@ class BrainRegister(object):
         
         if (self.downsampling_img == 'source'):
             # TARGET is low res. : move target images from target to ds source
-            print('')
-            print('')
-            print('=====================')
-            print('TARGET TO DOWNSAMPLED')
-            print('=====================')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('')
+            self.print_and_log('=====================')
+            self.print_and_log('TARGET TO DOWNSAMPLED')
+            self.print_and_log('=====================')
+            self.print_and_log('')
             
             # transform and save target template to ds source image space as requested
             self.transform_save_low_ds_template()
@@ -4707,12 +4770,12 @@ class BrainRegister(object):
         elif (self.downsampling_img == 'target'):
             # SOURCE is low res. : move source images from source to ds target
             
-            print('')
-            print('')
-            print('=====================')
-            print('SOURCE TO DOWNSAMPLED')
-            print('=====================')
-            print('')
+            self.print_and_log('')
+            self.print_and_log('')
+            self.print_and_log('=====================')
+            self.print_and_log('SOURCE TO DOWNSAMPLED')
+            self.print_and_log('=====================')
+            self.print_and_log('')
             
             # transform and save source template to ds image as requested
             self.transform_save_low_ds_template()
@@ -4725,7 +4788,7 @@ class BrainRegister(object):
             
         else:
             # no downsampling!
-            print('source and target template same resolution - no downsampling performed.')
+            self.print_and_log('source and target template same resolution - no downsampling performed.')
         
     
     
@@ -4739,27 +4802,27 @@ class BrainRegister(object):
                 if self.target_template_path_ds.exists() == False: 
                     # only transform if output does not exist
                     if self.target_template_img == None:
-                        print('  loading target template image : ' + 
+                        self.print_and_log('  loading target template image : ' + 
                           self.get_relative_path(self.target_template_path) )
                         self.target_template_img = self.load_image(self.target_template_path)
                     
                     
                     if self.tar_src_pm is None:
-                        print('  target to source paramater maps not loaded - loading files..')
+                        self.print_and_log('  target to source paramater maps not loaded - loading files..')
                         self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                     
                     
-                    print('  transforming target template to downsampled source..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming target template to downsampled source..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(self.target_template_path) )
                     
                     for i, pm in enumerate(self.tar_src_pm_paths):
-                        print('    target-to-source parameter map file '+
+                        self.print_and_log('    target-to-source parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     img_ds_src = self.transform_image(self.target_template_img, self.tar_src_pm)
                     
@@ -4770,13 +4833,13 @@ class BrainRegister(object):
                     
                     
                 else:
-                    print('')
-                    print('  target template to downsampled source : exists')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  target template to downsampled source : exists')
+                    self.print_and_log('')
             else:
-                print('')
-                print('  target template to downsampled source : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  target template to downsampled source : not requested')
+                self.print_and_log('')
             
             
         elif self.downsampling_img == 'target':
@@ -4786,26 +4849,26 @@ class BrainRegister(object):
                 if self.source_template_path_ds.exists() == False: 
                     # only transform if output does not exist
                     if self.source_template_img == None:
-                        print('  loading source template image : ' + 
+                        self.print_and_log('  loading source template image : ' + 
                           self.get_relative_path(self.source_template_path) )
                         self.source_template_img = self.load_image(self.source_template_path)
                     
                     if self.src_tar_pm is None:
-                        print('  source to target paramater maps not loaded - loading files..')
+                        self.print_and_log('  source to target paramater maps not loaded - loading files..')
                         self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                     
                     
-                    print('  transforming source template to downsampled target..')
-                    print('    image : ' + 
+                    self.print_and_log('  transforming source template to downsampled target..')
+                    self.print_and_log('    image : ' + 
                             self.get_relative_path(self.source_template_path) )
                     
                     for i, pm in enumerate(self.src_tar_pm_paths):
-                        print('    source-to-target parameter map file '+
+                        self.print_and_log('    source-to-target parameter map file '+
                                 str(i) + ' : ' + 
                                 self.get_relative_path(pm) )
-                    print('========================================================================')
-                    print('')
-                    print('')
+                    self.print_and_log('========================================================================')
+                    self.print_and_log('')
+                    self.print_and_log('')
                     
                     img_ds_tar = self.transform_image(self.source_template_img, self.src_tar_pm)
                     
@@ -4816,13 +4879,13 @@ class BrainRegister(object):
                     
                     
                 else:
-                    print('')
-                    print('  source template to downsampled target : exists')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  source template to downsampled target : exists')
+                    self.print_and_log('')
             else:
-                print('')
-                print('  transforming and saving source template to downsampled target image space : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving source template to downsampled target image space : not requested')
+                self.print_and_log('')
         
     
     
@@ -4835,15 +4898,15 @@ class BrainRegister(object):
             if self.brp['target-to-source-downsampling-save-annotations'] == True:
                 
                 if self.target_anno_path != []:
-                    print('')
-                    print('  transforming and saving target annotations to ds..')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target annotations to ds..')
                     
                     for i, s in enumerate(self.target_anno_path):
                         
                         if self.target_anno_path_ds[i].exists() == False: 
                             # only transform if output does not exist
                             if self.target_anno_img[i] == None:
-                                print('  loading target anno image : ' + 
+                                self.print_and_log('  loading target anno image : ' + 
                                   self.get_relative_path(self.target_anno_path[i]) )
                                 tar_anno_img = self.load_image(self.target_anno_path[i])
                             else:
@@ -4851,65 +4914,65 @@ class BrainRegister(object):
                             
                             
                             if self.tar_src_pm is None:
-                                print('  target to source paramater maps not loaded - loading files..')
+                                self.print_and_log('  target to source paramater maps not loaded - loading files..')
                                 self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                                 if self.tar_src_pm == None:
                                     print("ERROR : tar_src_ds_pm files do not exist - run register() first")
                                 self.tar_src_pm_anno = self.edit_pms_nearest_neighbour(self.tar_src_pm)
                             
-                            print('  transforming target annotation to downsampled source..')
-                            print('    image : ' + 
+                            self.print_and_log('  transforming target annotation to downsampled source..')
+                            self.print_and_log('    image : ' + 
                                     self.get_relative_path(self.target_anno_path[i]) )
                             
                             for j, pm in enumerate(self.tar_src_pm_paths):
-                                print('    target-to-source parameter map file '+
+                                self.print_and_log('    target-to-source parameter map file '+
                                         str(j) + ' : ' + 
                                         self.get_relative_path(pm) )
-                            print('========================================================================')
-                            print('')
-                            print('')
+                            self.print_and_log('========================================================================')
+                            self.print_and_log('')
+                            self.print_and_log('')
                             
                             img_ds_src = self.transform_image(tar_anno_img, self.tar_src_pm_anno)
                             
                             self.save_image(img_ds_src, self.target_anno_path_ds[i])
                             
                         else:
-                            print('')
-                            print('  target annotation to downsampled source : exists')
-                            print('')
+                            self.print_and_log('')
+                            self.print_and_log('  target annotation to downsampled source : exists')
+                            self.print_and_log('')
                     
                 else:
-                    print('')
-                    print('  transforming and saving target annotations to downsampled source image space : no annotations to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target annotations to downsampled source image space : no annotations to process')
+                    self.print_and_log('')
                     
                 
                 
                 # ALSO SAVE the structure trees associated with the annos
                 if self.target_tree_path_ds != []: # not a blank list
-                    print('')
-                    print('  target annotation structure tree to ds : ')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  target annotation structure tree to ds : ')
+                    self.print_and_log('')
                     for i,st_path in enumerate(self.target_tree_path):
                         # source_anno_path + _ds + _target all are SAME LENGTH!
                         if self.target_tree_path_ds[i].exists() == False:
-                            print('  copying annotation structure tree to ds ' + 
+                            self.print_and_log('  copying annotation structure tree to ds ' + 
                               str(self.target_tree_path_ds[i].resolve()))
                             shutil.copy(st_path, self.target_tree_path_ds[i])
                         else:
-                            print('  annotation structure tree to ds exists : ' + 
+                            self.print_and_log('  annotation structure tree to ds exists : ' + 
                               str(self.target_tree_path_ds[i].resolve()))
                         #anno_img = self.get_src_tree_tar(i)
                         #self.save_src_tree_tar(i, anno_img)
                 else:
-                    print('')
-                    print('  transforming and saving target annotation structure tree to ds : no trees to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target annotation structure tree to ds : no trees to process')
+                    self.print_and_log('')
                 
             else:
-                print('')
-                print('  transforming and saving target annotations to downsampled source image space : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving target annotations to downsampled source image space : not requested')
+                self.print_and_log('')
             
             
         elif self.downsampling_img == 'target':
@@ -4917,15 +4980,15 @@ class BrainRegister(object):
             if self.brp['source-to-target-downsampling-save-annotations'] == True:
                 
                 if self.source_anno_path != []:
-                    print('')
-                    print('  transforming and saving source annotations to ds..')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source annotations to ds..')
                     
                     for i, s in enumerate(self.source_anno_path):
                         
                         if self.source_anno_path_ds[i].exists() == False: 
                             # only transform if output does not exist
                             if self.source_anno_img[i] == None:
-                                print('  loading source anno image : ' + 
+                                self.print_and_log('  loading source anno image : ' + 
                                   self.get_relative_path(self.source_anno_path[i]) )
                                 src_anno_img = self.load_image(self.source_anno_path[i])
                             else:
@@ -4933,65 +4996,65 @@ class BrainRegister(object):
                             
                             
                             if self.src_tar_pm is None:
-                                print('  source to target paramater maps not loaded - loading files..')
+                                self.print_and_log('  source to target paramater maps not loaded - loading files..')
                                 self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                                 if self.src_tar_pm == None:
                                     print("ERROR : src_tar_ds_pm files do not exist - run register() first")
                                 self.src_tar_pm_anno = self.edit_pms_nearest_neighbour(self.src_tar_pm)
                             
-                            print('  transforming source annotation to downsampled target..')
-                            print('    image : ' + 
+                            self.print_and_log('  transforming source annotation to downsampled target..')
+                            self.print_and_log('    image : ' + 
                                     self.get_relative_path(self.source_anno_path[i]) )
                             
                             for j, pm in enumerate(self.src_tar_pm_paths):
-                                print('    source-to-target parameter map file '+
+                                self.print_and_log('    source-to-target parameter map file '+
                                         str(j) + ' : ' + 
                                         self.get_relative_path(pm) )
-                            print('========================================================================')
-                            print('')
-                            print('')
+                            self.print_and_log('========================================================================')
+                            self.print_and_log('')
+                            self.print_and_log('')
                             
                             img_ds_tar = self.transform_image(src_anno_img, self.src_tar_pm_anno)
                             
                             self.save_image(img_ds_tar, self.source_anno_path_ds[i])
                             
                         else:
-                            print('')
-                            print('  source annotation to downsampled target : exists')
-                            print('')
+                            self.print_and_log('')
+                            self.print_and_log('  source annotation to downsampled target : exists')
+                            self.print_and_log('')
                     
                 else:
-                    print('')
-                    print('  transforming and saving source annotations to downsampled target image space : no annotations to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source annotations to downsampled target image space : no annotations to process')
+                    self.print_and_log('')
                 
                 
                 # ALSO SAVE the structure trees associated with the annos
                 if self.source_tree_path_ds != []: # not a blank list
-                    print('')
-                    print('  source annotation structure tree to ds : ')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  source annotation structure tree to ds : ')
+                    self.print_and_log('')
                     for i,st_path in enumerate(self.source_tree_path):
                         # source_anno_path + _ds + _target all are SAME LENGTH!
                         if self.source_tree_path_ds[i].exists() == False:
-                            print('  copying annotation structure tree to ds ' + 
+                            self.print_and_log('  copying annotation structure tree to ds ' + 
                               str(self.source_tree_path_ds[i].resolve()))
                             shutil.copy(st_path, self.source_tree_path_ds[i])
                         else:
-                            print('  annotation structure tree to ds exists : ' + 
+                            self.print_and_log('  annotation structure tree to ds exists : ' + 
                               str(self.source_tree_path_ds[i].resolve()))
                         #anno_img = self.get_src_tree_tar(i)
                         #self.save_src_tree_tar(i, anno_img)
                 else:
-                    print('')
-                    print('  transforming and saving source annotation structure tree to ds : no trees to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source annotation structure tree to ds : no trees to process')
+                    self.print_and_log('')
                 
                 
             else:
-                print('')
-                print('  transforming and saving source annotations to downsampled target image space : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving source annotations to downsampled target image space : not requested')
+                self.print_and_log('')
         
     
     
@@ -5005,15 +5068,15 @@ class BrainRegister(object):
             if self.brp['target-to-source-downsampling-save-images'] == True:
                 
                 if self.target_image_paths != []:
-                    print('')
-                    print('  transforming and saving target images to ds..')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target images to ds..')
                     
                     for i, s in enumerate(self.target_image_paths):
                         
                         if self.target_image_paths_ds[i].exists() == False: 
                             # only transform if output does not exist
                             if self.target_image_imgs[i] == None:
-                                print('  loading target image : ' + 
+                                self.print_and_log('  loading target image : ' + 
                                   self.get_relative_path(self.target_image_paths[i]) )
                                 tar_img = self.load_image(self.target_image_paths[i])
                             else:
@@ -5021,42 +5084,42 @@ class BrainRegister(object):
                             
                             
                             if self.tar_src_pm is None:
-                                print('  target to source paramater maps not loaded - loading files..')
+                                self.print_and_log('  target to source paramater maps not loaded - loading files..')
                                 self.tar_src_pm = self.load_pm_files( self.tar_src_pm_paths )
                                 if self.tar_src_pm == None:
                                     print("ERROR : tar_src_ds_pm files do not exist - run register() first")
                             
-                            print('  transforming target image to downsampled source..')
-                            print('    image : ' + 
+                            self.print_and_log('  transforming target image to downsampled source..')
+                            self.print_and_log('    image : ' + 
                                     self.get_relative_path(self.target_image_paths[i]) )
                             
                             for j, pm in enumerate(self.tar_src_pm_paths):
-                                print('    target-to-source parameter map file '+
+                                self.print_and_log('    target-to-source parameter map file '+
                                         str(j) + ' : ' + 
                                         self.get_relative_path(pm) )
-                            print('========================================================================')
-                            print('')
-                            print('')
+                            self.print_and_log('========================================================================')
+                            self.print_and_log('')
+                            self.print_and_log('')
                             
                             img_ds_src = self.transform_image(tar_img, self.tar_src_pm)
                             
                             self.save_image(img_ds_src, self.target_image_paths_ds[i])
                             
                         else:
-                            print('')
-                            print('  target image to downsampled source : exists')
-                            print('')
+                            self.print_and_log('')
+                            self.print_and_log('  target image to downsampled source : exists')
+                            self.print_and_log('')
                     
                 else:
-                    print('')
-                    print('  transforming and saving target images to downsampled source image space : no images to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving target images to downsampled source image space : no images to process')
+                    self.print_and_log('')
                     
                 
             else:
-                print('')
-                print('  transforming and saving target images to downsampled source image space : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving target images to downsampled source image space : not requested')
+                self.print_and_log('')
             
             
         elif self.downsampling_img == 'target':
@@ -5064,15 +5127,15 @@ class BrainRegister(object):
             if self.brp['source-to-target-downsampling-save-images'] == True:
                 
                 if self.source_image_paths != []:
-                    print('')
-                    print('  transforming and saving source images to ds..')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source images to ds..')
                     
                     for i, s in enumerate(self.source_image_paths):
                         
                         if self.source_anno_path_ds[i].exists() == False: 
                             # only transform if output does not exist
                             if self.source_image_imgs[i] == None:
-                                print('  loading source image : ' + 
+                                self.print_and_log('  loading source image : ' + 
                                   self.get_relative_path(self.source_image_paths[i]) )
                                 src_img = self.load_image(self.source_image_paths[i])
                             else:
@@ -5080,41 +5143,41 @@ class BrainRegister(object):
                             
                             
                             if self.src_tar_pm is None:
-                                print('  source to target paramater maps not loaded - loading files..')
+                                self.print_and_log('  source to target paramater maps not loaded - loading files..')
                                 self.src_tar_pm = self.load_pm_files( self.src_tar_pm_paths )
                                 if self.src_tar_pm == None:
                                     print("ERROR : src_tar_ds_pm files do not exist - run register() first")
                             
-                            print('  transforming source image to downsampled target..')
-                            print('    image : ' + 
+                            self.print_and_log('  transforming source image to downsampled target..')
+                            self.print_and_log('    image : ' + 
                                     self.get_relative_path(self.source_image_paths[i]) )
                             
                             for j, pm in enumerate(self.src_tar_pm_paths):
-                                print('    source-to-target parameter map file '+
+                                self.print_and_log('    source-to-target parameter map file '+
                                         str(j) + ' : ' + 
                                         self.get_relative_path(pm) )
-                            print('========================================================================')
-                            print('')
-                            print('')
+                            self.print_and_log('========================================================================')
+                            self.print_and_log('')
+                            self.print_and_log('')
                             
                             img_ds_tar = self.transform_image(src_img, self.src_tar_pm)
                             
                             self.save_image(img_ds_tar, self.source_image_paths_ds[i])
                             
                         else:
-                            print('')
-                            print('  source image to downsampled target : exists')
-                            print('')
+                            self.print_and_log('')
+                            self.print_and_log('  source image to downsampled target : exists')
+                            self.print_and_log('')
                     
                 else:
-                    print('')
-                    print('  transforming and saving source images to downsampled target image space : no images to process')
-                    print('')
+                    self.print_and_log('')
+                    self.print_and_log('  transforming and saving source images to downsampled target image space : no images to process')
+                    self.print_and_log('')
                 
             else:
-                print('')
-                print('  transforming and saving source images to downsampled target image space : not requested')
-                print('')
+                self.print_and_log('')
+                self.print_and_log('  transforming and saving source images to downsampled target image space : not requested')
+                self.print_and_log('')
         
     
     
@@ -5230,11 +5293,11 @@ class ImageFilterPipeline(object):
         
         img = self.img
         
-        #print('')
-        #print('  Execute ImageFilterPipeline:')
+        #self.print_and_log('')
+        #self.print_and_log('  Execute ImageFilterPipeline:')
         for i, f in enumerate(self.img_filter):
-            #print('    Filter Type : ' + self.img_filter_name[i])
-            #print('    Filter Kernel : ' + str(self.img_filter_kernel[i]) )
+            #self.print_and_log('    Filter Type : ' + self.img_filter_name[i])
+            #self.print_and_log('    Filter Kernel : ' + str(self.img_filter_kernel[i]) )
             img = f.Execute(img)
             
         self.filtered_img = img

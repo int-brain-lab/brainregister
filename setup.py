@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     # package metadata
     name='brainregister',
-    version='0.9.0',
+    version='0.9.1',
     description='Python package for elasitx-based registration of mouse brain images to the Allen CCFv3.',
     long_description=long_description,
     long_description_content_type="text/markdown",
