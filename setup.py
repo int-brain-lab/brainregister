@@ -27,7 +27,8 @@ setuptools.setup(
     # declare dependencies here:
     install_requires=[
           #'SimpleITK>=2.0.0', - will use new ITK+elastix package
-          'SimpleITK-Elastix>=2.0.0rc2',
+          #'SimpleITK-Elastix>=2.0.0rc2', - use SITK+simpleElastix as package exists for windows
+          'simpleitk-simpleelastix>=2.0.0rc2.dev908',
           'numpy>=1.19.2',
           'pyyaml>=6.0',
           'pynrrd>=0.4.2',
