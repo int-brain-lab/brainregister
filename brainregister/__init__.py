@@ -2,7 +2,7 @@
 brainregister
 
 A Package that defines a 3D image registeration framework, including optimised
-registration parameters and the Allen CCFv3 mouse brian atlas.
+registration parameters and the Allen CCFv3 mouse brain atlas.
 
 """
 
