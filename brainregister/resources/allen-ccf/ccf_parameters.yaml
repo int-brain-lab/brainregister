@@ -11,7 +11,9 @@
 #     ccf-template-path   : greyscale image stack of auto-fluorescence data to 
 #                            register sample images to.
 #     ccf-annotations-path : List of labelled image representing annotated regions in the
-#                            template image.
+#                            template image. Includes brain region labels in uint16 image 
+#                            format, and index of ML,DV,AP coordinate in CCF space in uint16
+#                            images.
 #     ccf-structure-tree  : List of CSV files that includes metadata on the annotated
 #                            regions in the annotation image. Each line defines
 #                            metadata relating to the annotated region labelled
@@ -25,6 +27,9 @@
 ccf-template-path: coronal_rc_25_template.nrrd
 ccf-annotations-path: 
 - coronal_rc_25_annotation.nrrd
+- coronal_rc_25_iML.nrrd
+- coronal_rc_25_iDV.nrrd
+- coronal_rc_25_iAP.nrrd
 ccf-structure-tree: 
 - coronal_rc_25_annotation_tree.csv
 
@@ -32,6 +37,9 @@ ccf-structure-tree:
 # The parameters define key information about the CCF needed for registration:
 #   resolution: ccf resolution in XYZ - typically in um
 #   size: ccf image size in pixels in XYZ
+#   reference: voxel coordinates of any reference points in the target image
+#     eg. bregma is a common reference point defined in many brain atlases
+#     each reference point is defined by name, and x,y,z image coordinates given for the reference.
 #   location - Approximate location of the sample template in the ccf-template space.
 #       structure: What structure is in the sample template.
 #           Allen CCF: break whole CNS into 16 quadrants (4 coronal, 2 sagittal, 2 horizontal)
@@ -50,5 +58,10 @@ ccf-template-size:
   x: 456
   y: 320
   z: 528
+ccf-template-reference:
+  bregma:
+    x: 228
+    y: 13
+    z: 308
 ccf-template-structure: "CNS"
 ccf-template-orientation: "LR:SI:PA"

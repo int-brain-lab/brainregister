@@ -32,6 +32,9 @@ target-structure-tree:
 # The parameters define key information about the TARGET needed for registration:
 #   resolution: target resolution in XYZ - typically in um
 #   size: target image size in pixels in XYZ
+#   reference: voxel coordinates of any reference points in the target image
+#     eg. bregma is a common reference point defined in many brain atlases
+#     each reference point is defined by name, and x,y,z image coordinates given for the reference.
 #   location - Approximate location of the sample template in the target-template space.
 #       structure: What structure is in the sample template.
 #           Allen CCF: break whole CNS into 16 quadrants (4 coronal, 2 sagittal, 2 horizontal)
@@ -50,5 +53,10 @@ target-template-size:
   x: 456
   y: 320
   z: 528
+target-template-reference:
+  bregma:
+    x: 228
+    y: 20
+    z: 300
 target-template-structure: "CNS"
 target-template-orientation: "LR:SI:PA"
